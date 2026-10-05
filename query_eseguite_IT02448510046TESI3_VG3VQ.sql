@@ -1,0 +1,156 @@
+/* =====================================================================
+   RICONCILIAZIONE FATTURA XML IT02448510046TESI3_VG3VQ.xml  -  gazza_tc
+   SOLA LETTURA: solo SELECT / WITH. Nessuna scrittura, nessun #tmp, nessun EXEC.
+
+   Esecuzione (da una macchina nella rete, con accesso al server):
+     sqlcmd -S <server>\gfbia25 -E -C -d gazza_tc -i questo_file.sql -o output.txt -s"|" -W
+   (se gfbia25 e' il nome del server: -S gfbia25)
+
+   Ogni passo e' separato da GO. Se un passo da' errore "Invalid column name",
+   NON correggere a mano il nome: usare il risultato del PASSO 1 e segnalarmelo.
+   Dove la struttura non e' certa uso SELECT * con TOP limitato.
+   ===================================================================== */
+
+-- ===== PASSO 0: verifica connessione ==================================
+SELECT DB_NAME() AS db, @@SERVERNAME AS server;
+GO
+
+-- ===== PASSO 1: verifica catalogo (tabelle/colonne esistenti) =========
+SELECT TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME IN (
+  'MUSTWEB_FILE','MUSTWEB_HEAD','MUSTWEB_RIGHE','MUSTWEB_TOT','MUSTWEB_DOC_LINK','MUSTWEB_LINK','MUSTWEB_XML',
+  'CF','DDT_FOR','DDT_FOR_TOT','DDT_FOR_SPEC','DDT_FOR_RIGHE','DDT_FOR_RIGHE_SPEC','DDT_FOR_SPESE',
+  'ORD_FOR','ORD_FOR_SPEC','ORD_FOR_RIGHE','ORD_FOR_RIGHE_SPEC','ART_ANA',
+  'FATT_FOR','FATT_FOR_SPEC','FATT_FOR_RIGHE_SPEC')
+ORDER BY TABLE_NAME, ORDINAL_POSITION;
+GO
+
+-- ===== PASSO 2: controllo preliminare - file Mustweb e collegamenti ====
+SELECT * FROM MUSTWEB_FILE WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml';
+GO
+SELECT * FROM MUSTWEB_DOC_LINK WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml';
+GO
+SELECT * FROM MUSTWEB_LINK WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml';
+GO
+
+-- ===== PASSO 3: testata, righe, riepiloghi IVA (XML) ===================
+SELECT * FROM MUSTWEB_HEAD WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml';
+GO
+SELECT NUM_RIGA, COD_ART, COD_ART_XML_1, COD_ART_XML_2, COD_ART_XML_3, COD_ART_XML_4, COD_ART_XML_5,
+       DES_RIGA, QUANT_RIGA, UM, PREZZO_LORDO_VU1,
+       SCONTO_1, SCONTO_2, SCONTO_3, SCONTO_4, SCONTO_5, IMPORTO_V1, COD_IVA, COD_TIPO_NAT
+FROM MUSTWEB_RIGHE
+WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml'
+ORDER BY NUM_RIGA;
+GO
+SELECT * FROM MUSTWEB_TOT WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml';
+GO
+
+-- Quadratura righe XML (somma righe vs testata)
+SELECT COUNT(*) AS n_righe, SUM(IMPORTO_V1) AS somma_righe, SUM(QUANT_RIGA) AS somma_quant
+FROM MUSTWEB_RIGHE
+WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml';
+GO
+
+-- ===== PASSO 4: duplicati fattura (stesso fornitore, stesso numero) ====
+SELECT s.*
+FROM FATT_FOR_SPEC s
+WHERE s.NUM_FATT_FOR = (SELECT TOP 1 NUM_DOC_FOR FROM MUSTWEB_HEAD WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml');
+GO
+
+-- ===== PASSO 5: fornitore (confronto con CF) ===========================
+SELECT f.COD_CF, f.P_IVA, f.COD_FISC, f.DENOMINAZIONE, f.TIPO_DOC,
+       c.RAG_SOC_CF, c.P_IVA_CF, c.COD_FISC_CF, c.STATO_CF, c.E_MAIL_CF
+FROM MUSTWEB_FILE f
+LEFT JOIN CF c ON c.COD_CF = f.COD_CF
+WHERE f.NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml';
+GO
+-- Cerca anche per P.IVA se COD_CF non coincide/e' vuoto
+SELECT c.COD_CF, c.RAG_SOC_CF, c.P_IVA_CF, c.COD_FISC_CF, c.STATO_CF
+FROM CF c
+WHERE c.P_IVA_CF IN (SELECT P_IVA FROM MUSTWEB_FILE WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml');
+GO
+
+-- ===== PASSO 6: verifica codici articolo proposti in ART_ANA ===========
+-- (nome colonna descrizione di ART_ANA da confermare col PASSO 1: uso SELECT *)
+SELECT r.NUM_RIGA, r.COD_ART AS cod_mustweb, r.DES_RIGA AS des_xml, a.*
+FROM MUSTWEB_RIGHE r
+LEFT JOIN ART_ANA a ON a.COD_ART = r.COD_ART
+WHERE r.NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml'
+ORDER BY r.NUM_RIGA;
+GO
+
+-- ===== PASSO 7: DDT candidati non fatturati dello stesso fornitore =====
+-- Struttura DDT_FOR_SPEC / DDT_FOR da confermare col PASSO 1 (chiave di join DOC_ID presunta).
+-- Intervallo: data fattura -/+ 90 giorni (modificabile).
+SELECT TOP 200 s.*, d.*
+FROM DDT_FOR_SPEC s
+JOIN DDT_FOR d ON d.DOC_ID = s.DOC_ID
+WHERE s.FLAG_FATTURATO = 0
+  AND d.COD_CF = (SELECT TOP 1 COD_CF FROM MUSTWEB_FILE WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml')
+  AND s.DATA_DDT_FOR BETWEEN
+        DATEADD(DAY, -90, (SELECT TOP 1 DATA_DOC FROM MUSTWEB_HEAD WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml'))
+    AND DATEADD(DAY,  90, (SELECT TOP 1 DATA_DOC FROM MUSTWEB_HEAD WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml'))
+ORDER BY s.DATA_DDT_FOR;
+GO
+
+-- ===== PASSO 8: righe dei DDT candidati + legame ordine ================
+SELECT TOP 500 r.DOC_RIGA_ID, r.DOC_ID, r.COD_ART, r.DES_RIGA, r.QUANT_RIGA, r.UM,
+       r.PREZZO_NETTO_VU1, r.IMPORTO_V1,
+       rs.ORD_RIGA_ID, rs.FLAG_FATTURATO, rs.FATTURA_ID
+FROM DDT_FOR_RIGHE r
+LEFT JOIN DDT_FOR_RIGHE_SPEC rs ON rs.DOC_RIGA_ID = r.DOC_RIGA_ID
+WHERE r.DOC_ID IN (
+  SELECT s.DOC_ID
+  FROM DDT_FOR_SPEC s
+  JOIN DDT_FOR d ON d.DOC_ID = s.DOC_ID
+  WHERE s.FLAG_FATTURATO = 0
+    AND d.COD_CF = (SELECT TOP 1 COD_CF FROM MUSTWEB_FILE WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml')
+    AND s.DATA_DDT_FOR BETWEEN
+          DATEADD(DAY, -90, (SELECT TOP 1 DATA_DOC FROM MUSTWEB_HEAD WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml'))
+      AND DATEADD(DAY,  90, (SELECT TOP 1 DATA_DOC FROM MUSTWEB_HEAD WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml')))
+ORDER BY r.DOC_ID, r.DOC_RIGA_ID;
+GO
+
+-- ===== PASSO 9: righe ordine collegate (fornitore, articolo, q.ta', UM, prezzo)
+SELECT TOP 500 o.*
+FROM ORD_FOR_RIGHE o
+WHERE o.ORD_RIGA_ID IN (
+  SELECT rs.ORD_RIGA_ID
+  FROM DDT_FOR_RIGHE_SPEC rs
+  JOIN DDT_FOR_RIGHE r ON r.DOC_RIGA_ID = rs.DOC_RIGA_ID
+  WHERE r.DOC_ID IN (
+    SELECT s.DOC_ID
+    FROM DDT_FOR_SPEC s
+    JOIN DDT_FOR d ON d.DOC_ID = s.DOC_ID
+    WHERE s.FLAG_FATTURATO = 0
+      AND d.COD_CF = (SELECT TOP 1 COD_CF FROM MUSTWEB_FILE WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml')));
+GO
+
+-- ===== PASSO 10: spese e totali dei DDT candidati ======================
+SELECT t.*
+FROM DDT_FOR_TOT t
+WHERE t.DOC_ID IN (
+  SELECT s.DOC_ID
+  FROM DDT_FOR_SPEC s
+  JOIN DDT_FOR d ON d.DOC_ID = s.DOC_ID
+  WHERE s.FLAG_FATTURATO = 0
+    AND d.COD_CF = (SELECT TOP 1 COD_CF FROM MUSTWEB_FILE WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml'));
+GO
+SELECT sp.*
+FROM DDT_FOR_SPESE sp
+WHERE sp.DOC_ID IN (
+  SELECT s.DOC_ID
+  FROM DDT_FOR_SPEC s
+  JOIN DDT_FOR d ON d.DOC_ID = s.DOC_ID
+  WHERE s.FLAG_FATTURATO = 0
+    AND d.COD_CF = (SELECT TOP 1 COD_CF FROM MUSTWEB_FILE WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml'));
+GO
+
+-- ===== PASSO 11 (solo se i dati estratti non bastano): XML originale ===
+-- Estrarre solo un frammento, mai l'XML intero.
+SELECT LEN(CAST(ROW_DOC AS NVARCHAR(MAX))) AS lunghezza_xml
+FROM MUSTWEB_XML
+WHERE NOME_FILE = 'IT02448510046TESI3_VG3VQ.xml';
+GO
