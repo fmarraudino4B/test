@@ -1,0 +1,42 @@
+{
+  "_istruzioni": "Copia come profilo-<cliente>.privato.json (fuori dal repository) e compila. Poi: python strumenti/applica_profilo.py DDT_Fornitori_6_casi_PARAMETRICO_V2.0.thinkaiagent.json <profilo> <uscita>. Valori di esempio FITTIZI.",
+  "cliente": {
+    "nome": "Azienda Esempio",
+    "sigla": "ACME"
+  },
+  "erp": {
+    "credenziale": "TCRESTAPI"
+  },
+  "configurazione": {
+    "workRoot": "\\\\server\\Scan_ThinkAI_Accettazione",
+    "flusso5Root": "",
+    "operatorEmail": "workforce@think-ai.it",
+    "operatorEmailCc": "",
+    "ownName": "AZIENDA ESEMPIO S.R.L.",
+    "ownShortName": "ACME",
+    "ownVat": "01234567890",
+    "causaliPerFlussoJson": {
+      "5": {
+        "codice": "CL-CLI",
+        "descrizione": "Conto lavorazione cliente"
+      },
+      "6": {
+        "codice": "RES-CLI",
+        "descrizione": "Reso da cliente"
+      }
+    },
+    "seriePerFlussoJson": {},
+    "depositiPerFlussoJson": {
+      "6": "RESI"
+    },
+    "magazziniPerFlussoJson": {},
+    "campoMagazzino": "",
+    "codiciCausaleContoLavoroCliente": "",
+    "prefissiArticoliJson": [],
+    "tolleranzaEccedenzaC00Perc": "0",
+    "tolleranzaPesoNettoPerc": "2",
+    "lunghezzaMinimaPrefissoD": "4",
+    "istruzioniExtraEstrazione": "",
+    "agentVersion": "ACME-DDT6-V2.0"
+  }
+}
