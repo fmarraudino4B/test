@@ -186,28 +186,28 @@ sempre il nome-funzione (`GestionaleSend({...})`), mai un numero. Il campo
 `Type` è un intero interno del formato di export `thinkai.workforce.agent`
 (non il DSL "Modalità Sviluppatore").
 
-Ricostruita per osservazione diretta su un solo export reale (**GAZZA Ordine
+Ricostruita per osservazione diretta su un solo export reale (**CLI-A Ordine
 Cliente v1.4.1**, formato `thinkai.workforce.agent 1.0`): copre solo i valori
 di `Type` effettivamente incontrati in quel file, **non tutti i 63 blocchi**.
 Non estrapolare valori mancanti per analogia.
 
 | `Type` | Blocco DSL corrispondente | Evidenza |
 |---|---|---|
-| 1 | `Query` (Query SQL) | `GAZZA:#5` |
-| 2 | `AiAnalysis` / `ExtractStructured` (schema step estrazione AI) | osservato nei sub-step del `GAZZA:#9` |
-| 4 | `SendEmail` | `GAZZA:#9→itemErrorSteps#4` |
-| 8 | `Branch` (if/else) | `GAZZA:#3`, `#7` |
-| 10 | `FileRead` | `GAZZA:#9→subSteps` |
-| 11 | `FileWrite` | `GAZZA:#11` |
-| 15 | `ForEach` | `GAZZA:#9` |
-| 17 | `FileList` | `GAZZA:#8` |
-| 18 | `SetFields` | `GAZZA:#1` |
-| 22 | `StopAndError` (Stop & Error) | `GAZZA:#3→elseSteps#1` |
-| 23 | `CodeJs` | `GAZZA:#2` |
-| 28 | `GestionaleSend` | `GAZZA:#4` |
-| 37 | `FileMove` | `GAZZA:#9→itemErrorSteps#5` |
-| 62 | `SqlInsert` | `GAZZA:#9→itemErrorSteps#2` |
-| 63 | `SqlUpdate` | `GAZZA:#9→itemErrorSteps#3` |
+| 1 | `Query` (Query SQL) | `CLI-A:#5` |
+| 2 | `AiAnalysis` / `ExtractStructured` (schema step estrazione AI) | osservato nei sub-step del `CLI-A:#9` |
+| 4 | `SendEmail` | `CLI-A:#9→itemErrorSteps#4` |
+| 8 | `Branch` (if/else) | `CLI-A:#3`, `#7` |
+| 10 | `FileRead` | `CLI-A:#9→subSteps` |
+| 11 | `FileWrite` | `CLI-A:#11` |
+| 15 | `ForEach` | `CLI-A:#9` |
+| 17 | `FileList` | `CLI-A:#8` |
+| 18 | `SetFields` | `CLI-A:#1` |
+| 22 | `StopAndError` (Stop & Error) | `CLI-A:#3→elseSteps#1` |
+| 23 | `CodeJs` | `CLI-A:#2` |
+| 28 | `GestionaleSend` | `CLI-A:#4` |
+| 37 | `FileMove` | `CLI-A:#9→itemErrorSteps#5` |
+| 62 | `SqlInsert` | `CLI-A:#9→itemErrorSteps#2` |
+| 63 | `SqlUpdate` | `CLI-A:#9→itemErrorSteps#3` |
 
 ⚠️ **NON DOCUMENTATO** oltre questa tabella: i `Type` dei restanti ~48 blocchi
 del catalogo non sono stati osservati in nessun export e non vanno indovinati.

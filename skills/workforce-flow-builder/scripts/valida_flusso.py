@@ -17,6 +17,7 @@ Controlli (le sigle Rn rimandano alle Regole d'oro di SKILL.md):
   [AVVISO] String()/Number() nel codice CodeJs: non esistono nel sandbox              (R18)
   [AVVISO] timeoutSeconds oltre il tetto di piattaforma (300 s)                        (R19)
   [AVVISO] FileWrite su percorso assoluto: scrive nella sandbox interna               (R12)
+  [AVVISO] dato cliente cablato in uno step (percorso, email, P.IVA): va in M00        (R20)
   [AVVISO] nome-blocco DSL non confermato                     (dsl/nomi-blocchi.md)
   [AVVISO] responseFormat "report"                                                     (R1)
   [AVVISO] throw new Error dentro un ciclo for                                         (R2)
@@ -294,6 +295,18 @@ def analizza(testo):
             if nome == "FileMove" and re.search(r'overwrite\s*:\s*true', t):
                 avvisi.append(f"riga {riga}: idempotencyKey su FileMove overwrite:true, gia' "
                               f"idempotente: rischio replay senza spostamento (R10).")
+        if nome != "SetFields":
+            for lit in re.findall(r'"([^"]*)"', t):
+                motivo = None
+                if re.search(r'(?<![<{\w])[A-Za-z]:\\', lit):
+                    motivo = "percorso"
+                elif re.search(r'[\w.+-]+@[\w-]+\.[\w.]+', lit) and "{" not in lit:
+                    motivo = "email"
+                elif re.search(r'(?<!\d)\d{11}(?!\d)', lit):
+                    motivo = "P.IVA"
+                if motivo:
+                    avvisi.append(f"riga {riga}: {motivo} cablato in {nome} ('{lit[:40]}'): "
+                                  f"spostalo in configurazione M00 o in un <SEGNAPOSTO> (R20).")
         cred = re.search(r'credentialName\s*:\s*"([^"]*)"', t)
         if nome == "GestionaleSend" and cred and "{" in cred.group(1):
             errori.append(f"riga {riga}: credentialName '{cred.group(1)}' con placeholder: non viene "
@@ -382,6 +395,7 @@ for (const item of lastFileList) {
   SqlInsert({ table: "T", values: {"A":"{n}"}, idempotencyKey: "fissa" });
   FileWrite({ path: "E:\\\\out\\\\{n}.pdf", content: "{lastGestionalePdf}" });
   GestionaleSend({ credentialName: "{cred}", endpoint: "test", timeoutSeconds: 600 });
+  SendEmail({ to: ["mario@azienda.it"], subject: "x", body: "P.IVA 01234567890" });
   // @continueOnFail
   if ($.n == "1") {
     MailDisposition({ outcome: "processed" });
@@ -419,6 +433,8 @@ def self_test():
         (has(a, "Number() usato in CodeJs"), "R18 Number"),
         (has(a, "String() usato in CodeJs"), "R18 String"),
         (has(a, "percorso assoluto"), "R12 FileWrite assoluto"),
+        (has(a, "email cablato"), "R20 email"),
+        (has(a, "percorso cablato in FileWrite"), "R20 percorso"),
         (not any("x == 5" in x for x in e), "if JS in CodeJs ignorato"),
     ]
     falliti = [nome for ok, nome in checks if not ok]

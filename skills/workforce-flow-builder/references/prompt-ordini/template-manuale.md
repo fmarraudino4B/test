@@ -104,11 +104,11 @@ Regole:
 
 | Segnaposto | Valore da sostituire |
 |---|---|
-| `{{CARTELLA_INPUT}}` | Es. `E:\DOCUMENTI_CLI\OrdiniGazza` |
-| `{{CARTELLA_ELABORATO}}` | Es. `E:\DOCUMENTI_CLI\ELABORATO` |
-| `{{CARTELLA_NON_ELAB}}` | Es. `E:\DOCUMENTI_CLI\NON_ELAB` |
-| `{{NOME_AZIENDA_FORNITORE}}` | Es. `Gazza Anselmo s.r.l.` |
-| `{{PIVA_FORNITORE}}` | Es. `00426440343` |
+| `{{CARTELLA_INPUT}}` | Es. `<WORK_ROOT>\in` |
+| `{{CARTELLA_ELABORATO}}` | Es. `<WORK_ROOT>\ELABORATO` |
+| `{{CARTELLA_NON_ELAB}}` | Es. `<WORK_ROOT>\NON_ELAB` |
+| `{{NOME_AZIENDA_FORNITORE}}` | Es. `Azienda Esempio s.r.l.` |
+| `{{PIVA_FORNITORE}}` | Es. `<PIVA_PROPRIA>` |
 | `{{EMAIL_NOTIFICA}}` | Es. `'notifiche@example.com'` |
 
 ## Note rispetto al template cartella

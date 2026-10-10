@@ -10,7 +10,7 @@
 > Il testo qui sotto resta come riferimento storico dei prompt già in produzione.
 
 
-Questo template rispecchia `PROMPT-Ordini-Clienti-Gazza-Email.txt`.
+Questo template rispecchia `PROMPT-Ordini-Clienti-Email.txt`.
 Aggiunge i passi 1-3 di ricezione email prima del ciclo ForEach standard.
 Dal passo ForEach in poi il flusso è identico alla versione cartella.
 
@@ -113,7 +113,7 @@ Regole:
 | Segnaposto | Valore da sostituire |
 |---|---|
 | `{{CREDENTIAL_EMAIL}}` | Es. `gmail-ordini` / `imap-ordini` |
-| `{{CARTELLA_INPUT}}` | Es. `C:\AggCross\DocOrdCliGazza` |
-| `{{NOME_AZIENDA_FORNITORE}}` | Es. `Gazza Anselmo s.r.l.` |
-| `{{PIVA_FORNITORE}}` | Es. `00426440343` |
+| `{{CARTELLA_INPUT}}` | Es. `<WORK_ROOT>\in` |
+| `{{NOME_AZIENDA_FORNITORE}}` | Es. `Azienda Esempio s.r.l.` |
+| `{{PIVA_FORNITORE}}` | Es. `<PIVA_PROPRIA>` |
 | `{{EMAIL_NOTIFICA}}` | Es. `'ufficio@example.com'` |

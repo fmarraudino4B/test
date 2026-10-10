@@ -472,7 +472,7 @@ return {
 
 ## sogliaOutput (variante avanzata di bodyOutput con soglia % risolta)
 
-Pattern ricavato dal flusso reale GAZZA Ordine Cliente v1.4.1 (vedi
+Pattern ricavato dal flusso reale CLI-A Ordine Cliente v1.4.1 (vedi
 `../dsl/pattern.md` §A13 e `esempi.md` §6): invece di
 bloccare il documento non appena manca un articolo, calcola la percentuale di
 righe risolte ed **accetta un ordine parziale** sopra una soglia configurabile.
@@ -591,7 +591,7 @@ return {
 };
 ```
 
-Poi: `FileMove` con `idempotencyKey: "gazza-claim-{fileCorrelationId}"` verso
+Poi: `FileMove` con `idempotencyKey: "ordcli-claim-{fileCorrelationId}"` verso
 `processingPath`; `SqlUpdate` che chiude gli eventuali orfani
 `STATO='IN_ELABORAZIONE'` con lo stesso `FILE_NAME` ma `CORRELATION_ID`
 diverso da quello corrente; `SqlInsert` di apertura log con verifica

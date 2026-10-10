@@ -87,10 +87,10 @@ sempre il COD_ART della tabella ART_ANA (non il codice secondario).
 #### `lookup` — query SQL arbitraria (SELECT di sola lettura) — ⚠️ DEPRECATO in v1.5.0
 
 ⚠️ **DEPRECATO in v1.5.0**: la doc ufficiale TcRestAPI non riporta più l'endpoint
-`/lookup` (era presente fino a v1.4.5). I flussi legacy (es. GAZZA) che lo usano
+`/lookup` (era presente fino a v1.4.5). I flussi legacy (es. CLI-A) che lo usano
 restano operativi, ma **non usarlo in nuovi flussi**: preferire le ricerche
 strutturate (`articoli`/`documenti` con `filtro`/`filtroRaw`). Se serve una query
-grezza, verificare prima con Four Infolab se `/lookup` resta supportato lato server.
+grezza, verificare prima con il produttore dell'ERP se `/lookup` resta supportato lato server.
 Nota storica: il nome endpoint corretto è `lookup`, non `sql` (il parametro del
 blocco che porta la query resta `sql`).
 ```javascript
@@ -303,8 +303,8 @@ lascia decidere il prezzo al listino TC invece di inserire 0 o bloccare la riga.
 
 #### `lookup` — query SQL SELECT grezza (sola lettura) — ⚠️ DEPRECATO in v1.5.0
 ⚠️ **Deprecato**: la doc ufficiale TcRestAPI v1.5.0 non riporta più l'endpoint
-`/lookup`. Blocco mantenuto per i flussi legacy (es. GAZZA); per i nuovi flussi
-preferire le ricerche strutturate. Se indispensabile, verificare con Four Infolab
+`/lookup`. Blocco mantenuto per i flussi legacy (es. CLI-A); per i nuovi flussi
+preferire le ricerche strutturate. Se indispensabile, verificare con il produttore dell'ERP
 il supporto lato server.
 ```javascript
 GestionaleSend({
@@ -323,7 +323,7 @@ Nota storica: fino a v1.4.5 il path REST era `/lookup` (resource `SQL`, body
 
 ```javascript
 FileList({
-  path:      "E:\\DOCUMENTI_CLI\\OrdiniGazza",
+  path:      "<CARTELLA_INPUT>",
   pattern:   "*.pdf",
   recursive: false
 });
@@ -344,7 +344,7 @@ in una stringa più lunga. Se è l'intera stringa, la sostituzione non avviene.
 ```javascript
 // ✓ CORRETTO — log JSON
 FileWrite({
-  path:             "E:\\DOCUMENTI_CLI\\log\\{agentName}_{timestamp}.json",
+  path:             "<WORK_ROOT>\\log\\{agentName}_{timestamp}.json",
   content:          "{logJsonString}",
   append:           false,
   createDirectories: true
@@ -363,7 +363,7 @@ Variabili prodotte:
 ```javascript
 FileMove({
   source:      "{__loopItem}",                       // path originale PDF
-  destination: "E:\\DOCUMENTI_CLI\\ELABORATO\\",     // cartella destinazione
+  destination: "<WORK_ROOT>\\ELABORATO\\",     // cartella destinazione
   overwrite:   true
 });
 // @continueOnFail

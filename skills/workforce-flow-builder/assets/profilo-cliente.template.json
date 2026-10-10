@@ -1,0 +1,60 @@
+{
+  "_istruzioni": "Copia questo file come profilo-<cliente>.privato.json FUORI dal repository e compila i valori. Descrizione di ogni campo: references/parametri.md e references/profili-cliente.md. Gli esempi sono fittizi.",
+  "identita": {
+    "agentVersion": "ORDCLI-V1",
+    "ownName": "Azienda Esempio s.r.l.",
+    "ownVat": "01234567890",
+    "credenzialeErp": "tc-produzione",
+    "prefissoTabelle": "THINKAI_CLIENTE_",
+    "dbErp": "ERP_DB"
+  },
+  "cartelle": {
+    "workRoot": "D:\\WorkForce\\Agente",
+    "inputDirectory": "D:\\WorkForce\\Agente\\in",
+    "processingDirectory": "D:\\WorkForce\\Agente\\processing",
+    "cartellaElaborato": "D:\\WorkForce\\Agente\\ELABORATO",
+    "cartellaReview": "D:\\WorkForce\\Agente\\REVIEW",
+    "cartellaErrore": "D:\\WorkForce\\Agente\\ERRORE"
+  },
+  "notifiche": {
+    "operatorEmail": "ufficio@example.com",
+    "operatorEmailCc": ""
+  },
+  "documentoErp": {
+    "tipoDocumento": "ORD_CLI",
+    "defaultCausale": "OC01",
+    "defaultSerie": "A",
+    "defaultDeposito": "01",
+    "righePerBlocco": 24,
+    "retrySuCreazione": false
+  },
+  "soglie": {
+    "minPercentualeRisoltePerCreare": 60,
+    "tolleranzaRiga": 0.01,
+    "tolleranzaTotali": 0.02,
+    "finestraDdtGiorni": 90,
+    "maxPerRun": 50
+  },
+  "opzioni": {
+    "umPolicy": "BASE_ARTICOLO",
+    "creaConRigheMinime": 1,
+    "prezzoPolicy": "RICALCOLO_ERP",
+    "confrontoListino": "SOLO_SEGNALAZIONE",
+    "anagraficaMultipla": "REVISIONE",
+    "fallbackRagioneSociale": true,
+    "cascataArticoli": ["MEMORIA", "COD_ART", "CODICE_SECONDARIO", "EAN", "CANDIDATI_AI"],
+    "autoLearning": true,
+    "dataRegistrazione": "OGGI",
+    "riferimentoOrdinePerFornitore": [
+      { "codFornitore": "F0001", "etichetta": "vs ordine", "fonte": "TESTO" },
+      { "codFornitore": "F0002", "etichetta": "Ns.rif.", "fonte": "TESTO" },
+      { "codFornitore": "F0003", "etichetta": "", "fonte": "NUMERO_CONFERMA" }
+    ],
+    "causaliDaRevisione": ["conto riparazioni"],
+    "fileDaScartare": ["_ZD_001.xml"],
+    "emailEsito": "MINIMALE",
+    "modalitaScrittura": "API",
+    "soloLettura": false,
+    "dms": { "attivo": false, "classeDocumento": "", "chiaveEsterna": "DOC_ID" }
+  }
+}

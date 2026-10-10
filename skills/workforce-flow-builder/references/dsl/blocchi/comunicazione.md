@@ -134,13 +134,13 @@ Nome DSL confermato in flusso esportato (evidenza `F1:711`). Scostamento dall'eu
   | Chiave | Tipo | Obbl. | Default | Note |
   | --- | --- | --- | --- | --- |
   | `to` | JSON | Sì | — | Array di indirizzi. — es. `["a@b.it"]` |
-  | `cc` | JSON | — | — | ✅ CONFERMATO (flusso GAZZA v1.4.1, esportato). Array di indirizzi in copia conoscenza. — es. `["{operatorEmailCc}"]` |
+  | `cc` | JSON | — | — | ✅ CONFERMATO (flusso CLI-A v1.4.1, esportato). Array di indirizzi in copia conoscenza. — es. `["{operatorEmailCc}"]` |
   | `subject` | testo | Sì | — | Oggetto dell'email. Supporta {placeholder}. — es. `Report {agentName}` |
   | `body` | testo lungo | Sì | — | Supporta {placeholder}. — es. `{lastAiOutput}` |
   | `bodyFormat` | scelta — html · markdown · plain | — | html | |
   | `attachments` | JSON | — | — | Array di path file. — es. `["reports/foo.pdf"]` |
   | `smtpConfigId` | testo | — | — | Vuoto = SMTP predefinito (override del proprietario o default). Seleziona una configurazione SMTP specifica per questo invio. |
-  | `idempotencyKey` / `idempotencyGroup` / `idempotencyRetryOnFailure` | testo / testo / sì-no | — | — | ✅ CONFERMATO (GAZZA). Vedi `pattern.md` §A8 — evita l'invio doppio della stessa notifica su retry. Chiave da un identificativo business stabile (es. `"gazza-email-technical-{fileCorrelationId}"`). |
+  | `idempotencyKey` / `idempotencyGroup` / `idempotencyRetryOnFailure` | testo / testo / sì-no | — | — | ✅ CONFERMATO (CLI-A). Vedi `pattern.md` §A8 — evita l'invio doppio della stessa notifica su retry. Chiave da un identificativo business stabile (es. `"ordcli-email-technical-{fileCorrelationId}"`). |
 
 - **Output (variabili StepData prodotte):** nessuno (il blocco non produce chiavi StepData).
 - **Riferimenti incrociati:** `{agentName}`; `{lastAiOutput}`; Markdown (per convertire il corpo prima dell'invio con `direction=mdToHtml`); `pattern.md` §A8 (idempotenza).

@@ -1,9 +1,9 @@
 // Flusso in codice (Modalità Sviluppatore). Proiezione fedele del grafo.
 // @alias CONFIGURAZIONE
 SetFields({ assignments: [
-  {"key":"workRoot","value":"<CARTELLA_ROOT>"},
-  {"key":"inputDirectory","value":"<CARTELLA_ROOT>\\in"},
-  {"key":"workRootIngresso","value":"<CARTELLA_ROOT>\\in"},
+  {"key":"workRoot","value":"<WORK_ROOT>"},
+  {"key":"inputDirectory","value":"<WORK_ROOT>\\in"},
+  {"key":"workRootIngresso","value":"<WORK_ROOT>\\in"},
   {"key":"operatorEmail","value":"<EMAIL_OPERATORE>"},
   {"key":"ownVat","value":"<PIVA_PROPRIA>"},
   {"key":"minPercentualeRisoltePerCreare","value":"60"},

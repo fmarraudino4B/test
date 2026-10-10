@@ -27,7 +27,7 @@ pannello Gestione errori del ForEach + M11 idempotente + M14 audit + M15 heartbe
 ---
 
 ## A1 — Documento di vendita PDF → ERP (ordine cliente)
-- **Riferimento:** GAZZA-OC 1.5.7A (produzione), F1 (estrazione), prompt `prompt-ordini/template-*.md`.
+- **Riferimento:** CLI-A-OC 1.5.7A (produzione), F1 (estrazione), prompt `prompt-ordini/template-*.md`.
 - **Ricetta:** M00 → [P: M01, M02] → M03 → { M04 → [P: M05] → classificazione (opzionale) →
   M06 → M07 → M08 → M09 → M10 → M11 → M12 → M14 → M13 → M15 } → [P: heartbeat].
 - **Decisioni:** trigger (cartella / mail / schedulato); soglia % (`minPercentualeRisoltePerCreare`);
@@ -37,12 +37,12 @@ pannello Gestione errori del ForEach + M11 idempotente + M14 audit + M15 heartbe
   `prompt-ordini/` scelto (`template-avanzato.md` se serve il livello P), sostituendo i `{{…}}`.
 
 ## A2 — Documento fornitore PDF → ERP con riconciliazione (DDT/fattura)
-- **Riferimento:** DECOX-DDT (blocchi + split), DECOX-FATT, F2, TR Industrial (conto lavoro).
+- **Riferimento:** CLI-B-DDT (blocchi + split), CLI-B-FATT, F2, CLI-F (conto lavoro).
 - **Documenti lunghi:** M18 a blocchi, M20 per lo split; retry disabilitato su `documento`.
 - **Ricetta:** come A1 con `endpoint: "fornitori"` in M08 e, dopo M09, uno stadio di
   **aggancio riga d'ordine** (residuo `> 0`, risultato univoco) + **controllo prezzi**
   bolla↔ordine (`priceAlertsJson`, solo segnalazione).
-- **Specifiche DECOX da non dimenticare:** righe di riferimento ordine su riga separata da
+- **Specifiche CLI-B da non dimenticare:** righe di riferimento ordine su riga separata da
   propagare e rimuovere; EAN come codice alternativo; P.IVA estera (`VAT NO.`, `UID`); testi di
   esito troncati prima dell'`SqlUpdate`.
 
@@ -67,8 +67,8 @@ pannello Gestione errori del ForEach + M11 idempotente + M14 audit + M15 heartbe
   sincrona vs asincrona. ⚠️ Nessun flusso reale di questo tipo in catalogo: marca le inferenze.
 
 ## A6 — Batch su dati (EventDb / Schedule), arricchimento e reportistica
-- **Riferimento:** GAZZA-CC (dashboard HTML: Query → 8 blocchi dati → CodeJs insight → AiAnalysis
-  narrativo **solo su dati aggregati** → HTML → `PublishDashboard` + email), CMRISTO-F5
+- **Riferimento:** CLI-A-CC (dashboard HTML: Query → 8 blocchi dati → CodeJs insight → AiAnalysis
+  narrativo **solo su dati aggregati** → HTML → `PublishDashboard` + email), CLI-C-F5
   (aggiornamento date consegna via `SqlUpdate`), LEAD (hash per saltare l'invariato, AI web,
   `SqlUpdate` mirato, limite per run).
 - **Blocchi:** trigger EventDb (`lastEventRows`) o Schedule + `Query`; trasformazioni con
@@ -83,7 +83,7 @@ pannello Gestione errori del ForEach + M11 idempotente + M14 audit + M15 heartbe
   `SendAndWait` al posto della revisione via cartella quando l'operatore risponde da mobile.
 
 ## A8 — Verifica / riconciliazione in sola lettura
-- **Riferimento:** GAZZA-MW (Mustweb XML ↔ DDT ↔ ordini), GAZZA-FV (fattura fornitore, 7 controlli).
+- **Riferimento:** CLI-A-MW (PortaleXML XML ↔ DDT ↔ ordini), CLI-A-FV (fattura fornitore, 7 controlli).
 - **Ricetta:** M00 → M01 (anche schema) → acquisizione (XML deterministico o M06 su PDF) →
   controlli SQL deterministici con M17 → **una** AI solo dove serve giudizio (es. catena DDT/ordini,
   output JSON) → step verdetto (COMPLETA / PARZIALE / NON POSSIBILE, declassamento automatico con
@@ -94,14 +94,14 @@ pannello Gestione errori del ForEach + M11 idempotente + M14 audit + M15 heartbe
   `VERIFICA_A_POSTERIORI`.
 
 ## A9 — Caricamento su tabelle di staging / frontiera
-- **Riferimento:** DAICOM-XOFT.
+- **Riferimento:** CLI-D-STAGING.
 - **Ricetta:** M01 (config, ERP, schema staging) → polling cartella → M06 → normalizzazione
   (tipo documento, valuta, IVA) → `SqlInsert` in ordine di dipendenza (righe → IVA → pagamenti →
   testata) con idempotenza per documento → archiviazione PDF → audit → email.
 - **Decisioni:** significato degli stati della staging, chi la consuma, gestione cambio valuta.
 
 ## A10 — Pipeline multi-agente (EventDb)
-- **Riferimento:** piano FARPRO (12 agenti, 3 ondate con decision gate).
+- **Riferimento:** piano CLI-E (12 agenti, 3 ondate con decision gate).
 - **Ricetta:** modello dati canonico; ogni agente esegue una fase e scrive lo stato in una tabella
   stato/audit; l'agente successivo parte con trigger EventDb su quella tabella; regole di business
   in tabella di configurazione (riuso multi-cliente); adapter separati per formato (XML

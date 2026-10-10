@@ -175,7 +175,7 @@
 | `rowsKey` | testo | — | — | Chiave StepData con un ARRAY di oggetti {colonna: valore} (tipicamente da un Code JS). Ha precedenza su 'values'. Le chiavi non presenti nello schema tabella vengono ignorate. — es. `righeFrontiera` |
 | `values` | JSON | — | — | Alternativa a 'rowsKey': oggetto JSON {colonna: valore} per UNA riga; i valori stringa supportano placeholder {chiave} risolti dallo StepData. Valori sempre passati come parametri bound. — es. `{"COD_CF":"{codCf}","STATO":1}` |
 | `dataConnectionId` | intero | — | — | Vuoto = connessione della Chat dell'agente. Valorizzato = quella connessione (deve appartenere all'owner). È un'operazione di SCRITTURA: usa un account DB con permessi di INSERT sulla tabella. |
-| `idempotencyKey` / `idempotencyGroup` / `idempotencyRetryOnFailure` | testo / testo / sì-no | — | — | ✅ CONFERMATO (flusso GAZZA v1.4.1, esportato — es. `"gazza-log-start-{fileCorrelationId}"`). Vedi `pattern.md` §A8: rende l'INSERT sicuro da ripetere su retry/crash/ForEach senza duplicare la riga. Chiave da un identificativo business stabile, mai timestamp/GUID. |
+| `idempotencyKey` / `idempotencyGroup` / `idempotencyRetryOnFailure` | testo / testo / sì-no | — | — | ✅ CONFERMATO (flusso CLI-A v1.4.1, esportato — es. `"ordcli-log-start-{fileCorrelationId}"`). Vedi `pattern.md` §A8: rende l'INSERT sicuro da ripetere su retry/crash/ForEach senza duplicare la riga. Chiave da un identificativo business stabile, mai timestamp/GUID. |
 
 - **Output (variabili StepData prodotte):**
 
@@ -191,7 +191,7 @@
   - `rowsKey` ha precedenza su `values`.
   - `dataConnectionId` valorizzato deve appartenere all'owner.
   - La Query resta read-only (solo Insert/Update/Delete scrivono).
-  - Pattern di guardia osservato in produzione (GAZZA): dopo l'insert, controllare `lastInsertRowCount === 1` e fare `throw` se diverso, per intercettare race-condition su chiavi di correlazione concorrenti.
+  - Pattern di guardia osservato in produzione (CLI-A): dopo l'insert, controllare `lastInsertRowCount === 1` e fare `throw` se diverso, per intercettare race-condition su chiavi di correlazione concorrenti.
 - **Riferimenti incrociati:** Code JS (alimenta `rowsKey`); Query SQL; Update SQL; `lastQueryRows`; `pattern.md` §A8 (idempotenza).
 
 ---
@@ -277,8 +277,8 @@
 | `target` | testo | Sì | — | Percorso di destinazione. — es. `archivio/a.pdf` |
 | `overwrite` | sì/no | — | false |  |
 | `createTargetDir` | sì/no | — | true |  |
-| `allowedRoot` | testo | — | — | ✅ CONFERMATO (flusso GAZZA v1.4.1, esportato). Fence di sicurezza: la destinazione (`target`) viene rifiutata se non ricade sotto questa cartella radice (tipicamente `{workRoot}`). Da impostare sempre quando `target` è (anche in parte) costruito da dati derivati da AI o da file esterni, per evitare che un percorso malformato/malevolo scriva fuori dall'area di lavoro dell'agente. |
-| `idempotencyKey` / `idempotencyGroup` / `idempotencyRetryOnFailure` | testo / testo / sì-no | — | — | ✅ CONFERMATO (GAZZA). Vedi `pattern.md` §A8 — protegge lo spostamento da doppia esecuzione su retry/crash. Usare una chiave di business stabile (es. include l'item corrente del ForEach), mai timestamp/GUID. |
+| `allowedRoot` | testo | — | — | ✅ CONFERMATO (flusso CLI-A v1.4.1, esportato). Fence di sicurezza: la destinazione (`target`) viene rifiutata se non ricade sotto questa cartella radice (tipicamente `{workRoot}`). Da impostare sempre quando `target` è (anche in parte) costruito da dati derivati da AI o da file esterni, per evitare che un percorso malformato/malevolo scriva fuori dall'area di lavoro dell'agente. |
+| `idempotencyKey` / `idempotencyGroup` / `idempotencyRetryOnFailure` | testo / testo / sì-no | — | — | ✅ CONFERMATO (CLI-A). Vedi `pattern.md` §A8 — protegge lo spostamento da doppia esecuzione su retry/crash. Usare una chiave di business stabile (es. include l'item corrente del ForEach), mai timestamp/GUID. |
 
 - **Output (variabili StepData prodotte):**
 
@@ -415,7 +415,7 @@
 | `setKey` | testo | — | — | Alternativa a 'set': chiave StepData con l'oggetto {colonna: valore} (es. da Code JS). — es. `valoriUpdate` |
 | `where` | testo | Sì | — | OBBLIGATORIA (no update intera tabella). Condizione SQL con placeholder {chiave} → parametri bound. Niente ';'. — es. `ID_ORDINE = {idOrdine}` |
 | `dataConnectionId` | intero | — | — | Vuoto = connessione della Chat. Valorizzato = quella connessione (owner). SCRITTURA: usa un account DB con permessi di UPDATE. |
-| `idempotencyKey` / `idempotencyGroup` / `idempotencyRetryOnFailure` | testo / testo / sì-no | — | — | ✅ CONFERMATO (flusso GAZZA v1.4.1, esportato — es. `"gazza-log-final-{fileCorrelationId}"`). Vedi `pattern.md` §A8. |
+| `idempotencyKey` / `idempotencyGroup` / `idempotencyRetryOnFailure` | testo / testo / sì-no | — | — | ✅ CONFERMATO (flusso CLI-A v1.4.1, esportato — es. `"ordcli-log-final-{fileCorrelationId}"`). Vedi `pattern.md` §A8. |
 
 - **Output (variabili StepData prodotte):**
 

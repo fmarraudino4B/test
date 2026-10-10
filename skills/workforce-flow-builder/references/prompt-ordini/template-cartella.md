@@ -1,6 +1,6 @@
 # Template: Trigger Cartella (monitor su nuovo file)
 
-Questo template rispecchia la versione `PROMPT-Ordini-Clienti-Gazza-triegger-cartella.txt`
+Questo template rispecchia la versione `PROMPT-Ordini-Clienti-triegger-cartella.txt`
 già validata in produzione. È la versione più semplice: il trigger di WorkForce
 "su nuovo file" popola direttamente `lastFileList`.
 
@@ -96,7 +96,7 @@ Regole:
 
 | Segnaposto | Valore da sostituire |
 |---|---|
-| `{{CARTELLA_INPUT}}` | Es. `C:\AggCross\DocOrdCliGazza` |
-| `{{NOME_AZIENDA_FORNITORE}}` | Es. `Gazza Anselmo s.r.l.` |
-| `{{PIVA_FORNITORE}}` | Es. `00426440343` |
+| `{{CARTELLA_INPUT}}` | Es. `<WORK_ROOT>\in` |
+| `{{NOME_AZIENDA_FORNITORE}}` | Es. `Azienda Esempio s.r.l.` |
+| `{{PIVA_FORNITORE}}` | Es. `<PIVA_PROPRIA>` |
 | `{{EMAIL_NOTIFICA}}` | Es. `'ufficio@example.com'` |

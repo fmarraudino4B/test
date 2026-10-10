@@ -1,6 +1,6 @@
 # Libreria moduli DSL componibili
 
-> **Cos'è.** Tutti i flussi reali raccolti (F1–F4, GAZZA v1.4.x, collaudo DECOX, template ordini)
+> **Cos'è.** Tutti i flussi reali raccolti (F1–F4, CLI-A v1.4.x, collaudo CLI-B, template ordini)
 > ripetono gli stessi 16 "mattoni". Qui ognuno è isolato, corretto e pronto da incollare:
 > **componi un flusso nuovo concatenando moduli**, poi adatta solo la logica di business.
 > Ogni modulo dichiara: **IN** (chiavi StepData lette), **OUT** (chiavi scritte), **ANTI-BLEED**
@@ -15,27 +15,27 @@
 ## Indice
 | # | Modulo | Quando | Fonte |
 |---|---|---|---|
-| M00 | Configurazione centralizzata | sempre | GAZZA:#1 |
-| M01 | Preflight fail-closed | produzione senza supervisione | GAZZA:#2-#7, A10 |
-| M02 | Recupero orfani | il flusso sposta file in lavorazione | DECOX |
+| M00 | Configurazione centralizzata | sempre | CLI-A:#1 |
+| M01 | Preflight fail-closed | produzione senza supervisione | CLI-A:#2-#7, A10 |
+| M02 | Recupero orfani | il flusso sposta file in lavorazione | CLI-B |
 | M03 | Elenco + ciclo con cap | trigger Manual/Schedule su cartella | F1/F2, A3 |
 | M04 | Cleanup anti-bleed | primo step di OGNI ciclo | F1:13, A6 |
-| M05 | Claim del file | schedulato con possibili sovrapposizioni | GAZZA:#9, A12 |
+| M05 | Claim del file | schedulato con possibili sovrapposizioni | CLI-A:#9, A12 |
 | M06 | Estrazione AI + catch | ogni AiAnalysis che alimenta logica | F1:47-57, A1/A5 |
-| M07 | Normalizzazione (numeri, date, P.IVA) | prima di qualunque scrittura ERP/SQL | F1:159, GAZZA |
-| M08 | Lookup anagrafica a cascata | cliente/fornitore da documento | F1:303, DECOX |
-| M09 | Cascata articoli + AI vincolata | righe da risolvere su anagrafica | GAZZA, A14 |
-| M10 | Esito con soglia | risultato parziale accettabile | GAZZA, A13 |
-| M11 | Creazione documento idempotente | scrittura ERP | GAZZA, A8 |
-| M12 | Stampa PDF documento | allegare il documento creato | DECOX (rettifica) |
+| M07 | Normalizzazione (numeri, date, P.IVA) | prima di qualunque scrittura ERP/SQL | F1:159, CLI-A |
+| M08 | Lookup anagrafica a cascata | cliente/fornitore da documento | F1:303, CLI-B |
+| M09 | Cascata articoli + AI vincolata | righe da risolvere su anagrafica | CLI-A, A14 |
+| M10 | Esito con soglia | risultato parziale accettabile | CLI-A, A13 |
+| M11 | Creazione documento idempotente | scrittura ERP | CLI-A, A8 |
+| M12 | Stampa PDF documento | allegare il documento creato | CLI-B (rettifica) |
 | M13 | Email esito (md→html) | notifica | F2:223-259, B3 |
-| M14 | Log/audit SQL sicuro | tracciabilità | GAZZA, DECOX |
-| M15 | Chiusura file + heartbeat | fine item / fine run | F2:261, GAZZA:#10-11 |
+| M14 | Log/audit SQL sicuro | tracciabilità | CLI-A, CLI-B |
+| M15 | Chiusura file + heartbeat | fine item / fine run | F2:261, CLI-A:#10-11 |
 | M16 | Intake mail durevole | ingresso da casella | corso M3/M15, A9 |
-| M17 | Lettura robusta output motore | ogni lettura di `lastQueryRows` / `lastAiJson` | Mustweb, GAZZA |
-| M18 | Documento a blocchi di righe | documenti con più di ~24 righe | DECOX Blocchi |
+| M17 | Lettura robusta output motore | ogni lettura di `lastQueryRows` / `lastAiJson` | PortaleXML, CLI-A |
+| M18 | Documento a blocchi di righe | documenti con più di ~24 righe | CLI-B Blocchi |
 | M19 | Conferma operatore | verifica con decisione umana | Fattura Fornitore Verifica |
-| M20 | Split PDF con CodePython | PDF lunghi o multi-documento | DECOX v1.1 |
+| M20 | Split PDF con CodePython | PDF lunghi o multi-documento | CLI-B v1.1 |
 
 ---
 
@@ -44,9 +44,9 @@
 ```js
 // @alias CONFIGURAZIONE
 SetFields({ assignments: [
-  {"key":"workRoot","value":"<E:\\DOCUMENTI_CLI\\Agente>"},
-  {"key":"inputDirectory","value":"<E:\\DOCUMENTI_CLI\\Agente\\in>"},
-  {"key":"workRootIngresso","value":"<E:\\DOCUMENTI_CLI\\Agente\\in>"},
+  {"key":"workRoot","value":"<WORK_ROOT>"},
+  {"key":"inputDirectory","value":"<WORK_ROOT>\\in"},
+  {"key":"workRootIngresso","value":"<WORK_ROOT>\\in"},
   {"key":"operatorEmail","value":"<ufficio@cliente.it>"},
   {"key":"minPercentualeRisoltePerCreare","value":"60"},
   {"key":"agentVersion","value":"<NOME>-V1"}
@@ -261,7 +261,7 @@ CodeJs({ outputKey: "esitoCalc" }, () => {
 });
 ```
 Tieni separati i **motivi di riga** (warning) dai **motivi bloccanti d'ordine**: mescolarli manda
-in revisione ordini sopra soglia (bug GAZZA).
+in revisione ordini sopra soglia (bug CLI-A).
 
 ## M11 — Creazione documento idempotente
 ```js
@@ -284,7 +284,7 @@ if ($.duplicato == "false") {
 `orderBusinessKey` = hash/concatenazione `codCf|numeroOrdine|dataOrdine` (business, non run).
 - `timeoutSeconds` ha un tetto di piattaforma di **300 s**.
 - **Niente retry automatico** sullo step `documento`: dopo un timeout il documento può essere già
-  stato creato lato server e il retry genera un duplicato (DECOX). Verifica con il pre-check.
+  stato creato lato server e il retry genera un duplicato (CLI-B). Verifica con il pre-check.
 - Oltre **~24 righe** in un colpo la creazione va in timeout: usa M18 (righe a blocchi).
 Leggi solo output a catalogo (`lastGestionaleCodice`, `lastGestionaleEsito`, `lastTargetCrossJson`),
 non chiavi inventate tipo `lastTargetCrossStatus` (B6). Controlli TcRestAPI §4.8 (causale, cliente,
@@ -426,7 +426,7 @@ Riferimento: Fattura Fornitore Verifica v1.0 (Fase 3).
 ## M20 — Split PDF con CodePython
 Per PDF lunghi (es. 34 pagine non scansionate) o con più documenti: uno step `CodePython` con
 `pythonPath` che punta a un interprete con `pypdf` produce i file `__pNNofMM.pdf`, poi un ciclo
-li elabora uno per uno. ⚠️ **DA VERIFICARE** la chiave di output: in DECOX lo split ha restituito
+li elabora uno per uno. ⚠️ **DA VERIFICARE** la chiave di output: in CLI-B lo split ha restituito
 "Nessuna risposta JSON dallo script di spezzettamento" (ipotesi: errore Python, output in
 `lastItems` invece di `splitEsito`, input non ricevuto). Prima del collaudo fatti dare dump
 StepData/CSV di run e verifica dove il blocco scrive il risultato. Scheda: `dsl/blocchi/output-script.md`.

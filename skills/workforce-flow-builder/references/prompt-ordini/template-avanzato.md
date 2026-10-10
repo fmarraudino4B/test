@@ -1,7 +1,7 @@
 # Template: Livello Avanzato — Fail-closed + Auto-learning + Audit
 
 Livello "enterprise" del flusso ordini cliente, ricavato da un flusso reale in
-produzione (**GAZZA Ordine Cliente v1.4.1**, tag `fail-closed`/`auto-learning`/
+produzione (**CLI-A Ordine Cliente v1.4.1**, tag `fail-closed`/`auto-learning`/
 `ai-vincolata`/`audit`/`REALE`). Non è una variazione del template `manuale`:
 aggiunge un intero livello di robustezza operativa pensato per girare
 **schedulato, senza supervisione umana ad ogni run**, con tracciabilità
@@ -105,20 +105,20 @@ BLOCCO 3 — SENTINELLA (fuori dal ForEach, in fondo al flusso, eseguito una vol
 
 | Segnaposto | Valore da sostituire |
 |---|---|
-| `{{CARTELLA_ROOT}}` | Es. `E:\DispositiveAI` (radice di lavoro, usata anche come `allowedRoot`) |
-| `{{CARTELLA_INPUT}}` | Es. `E:\DispositiveAI\Ordini` |
-| `{{CARTELLA_PROCESSING}}` | Es. `E:\DispositiveAI\Ordini\_processing` |
-| `{{CARTELLA_ELABORATO}}` | Es. `E:\DispositiveAI\Ordini\ELABORATO` |
-| `{{CARTELLA_ERRORE}}` | Es. `E:\DispositiveAI\Ordini\ERRORE` |
-| `{{CARTELLA_REVIEW}}` | Es. `E:\DispositiveAI\Ordini\REVIEW` |
+| `{{CARTELLA_ROOT}}` | Es. `<WORK_ROOT>` (radice di lavoro, usata anche come `allowedRoot`) |
+| `{{CARTELLA_INPUT}}` | Es. `<WORK_ROOT>\Ordini` |
+| `{{CARTELLA_PROCESSING}}` | Es. `<WORK_ROOT>\Ordini\_processing` |
+| `{{CARTELLA_ELABORATO}}` | Es. `<WORK_ROOT>\Ordini\ELABORATO` |
+| `{{CARTELLA_ERRORE}}` | Es. `<WORK_ROOT>\Ordini\ERRORE` |
+| `{{CARTELLA_REVIEW}}` | Es. `<WORK_ROOT>\Ordini\REVIEW` |
 | `{{EMAIL_OPERATORE}}` | Es. `sales@cliente.it` |
 | `{{EMAIL_CC}}` | Es. `supporto@example.com` |
 | `{{NOME_AZIENDA_FORNITORE}}` / `{{PIVA_FORNITORE}}` | Ragione sociale e P.IVA della nostra azienda (mai il cliente) |
 | `{{CAUSALE_DOC}}` / `{{SERIE_DOC}}` / `{{DEPOSITO}}` | Parametri fissi documento ORD_CLI |
 | `{{SOGLIA_PERCENTUALE}}` | Es. `60` |
-| `{{PREFISSO_TABELLE}}` | Es. `THINKAI_GAZZA_` — prefisso univoco per cliente, per evitare collisioni tra agenti diversi sullo stesso DB |
+| `{{PREFISSO_TABELLE}}` | Es. `THINKAI_<CLIENTE>_` — prefisso univoco per cliente, per evitare collisioni tra agenti diversi sullo stesso DB |
 | `{{INTERVALLO_MINUTI}}` | Es. `30` |
-| `{{NOME_AGENTE}}` | Es. `GAZZA-REALE` — usato in `agentVersion` e nei log |
+| `{{NOME_AGENTE}}` | Es. `CLI-A-REALE` — usato in `agentVersion` e nei log |
 
 ---
 

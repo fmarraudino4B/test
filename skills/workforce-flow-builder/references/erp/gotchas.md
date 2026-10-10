@@ -7,7 +7,7 @@ flusso WorkForce ordini clienti su TargetCross, con cause esatte e fix testati.
 
 ## 1. FileWrite — bare variable non sostituita nel path
 
-> ⚠️ **RETTIFICA (collaudo DECOX).** Il sintomo descritto qui è reale, ma il contesto (salvare
+> ⚠️ **RETTIFICA (collaudo CLI-B).** Il sintomo descritto qui è reale, ma il contesto (salvare
 > la stampa PDF con `FileWrite`) è un anti-pattern: `FileWrite` scrive solo testo e il PDF
 > risultante non si apre. Per la stampa usa `lastGestionalePdfPath` prodotto da
 > `documenti-stampa` (vedi `code-templates.md` § pdfPathOutput). La regola "mai l'intera
@@ -20,7 +20,7 @@ flusso WorkForce ordini clienti su TargetCross, con cause esatte e fix testati.
 ```
 Il connettore `SendEmail` poi fallisce con:
 ```
-allegato 'E:\DOCUMENTI_CLI\Elaborati\OrdCli_2026-ORD-C-0001828.pdf' non trovato
+allegato '<WORK_ROOT>\Elaborati\OrdCli_2026-ORD-C-0001828.pdf' non trovato
 ```
 
 ### Causa
@@ -37,7 +37,7 @@ Separare il path completo dal solo filename in `pdfPathOutput`, poi
 ```javascript
 // pdfPathOutput — produce ENTRAMBI
 const fileName = 'OrdCli_' + codice + '.pdf';
-const filePath = 'E:\\DOCUMENTI_CLI\\Elaborati\\' + fileName;
+const filePath = '<WORK_ROOT>\\Elaborati\\' + fileName;
 return {
   lastGestionalePdfPath:     filePath,   // path completo → allegato SendEmail
   lastGestionalePdfFileName: fileName    // solo filename → embedded in FileWrite
@@ -47,7 +47,7 @@ return {
 ```javascript
 // FileWrite — usa il filename embedded nella stringa del path
 FileWrite({
-  path: "E:\\DOCUMENTI_CLI\\Elaborati\\{lastGestionalePdfFileName}",  // ✓ embedded
+  path: "<WORK_ROOT>\\Elaborati\\{lastGestionalePdfFileName}",  // ✓ embedded
   content: "{lastGestionalePdfBase64}",
   append: false,
   createDirectories: true
@@ -64,13 +64,13 @@ hardcoded prima del `{filename}`.
 
 ### Sintomo
 File scritto in un path annidato come:
-`E:\DOCUMENTI_CLI\PDF\E:\DOCUMENTI_CLI\Elaborati\OrdCli_....pdf`
+`<WORK_ROOT>\PDF\<WORK_ROOT>\Elaborati\OrdCli_....pdf`
 
 ### Causa
 ```javascript
 // SBAGLIATO: lastGestionalePdfPath contiene già il path completo
-FileWrite({ path: "E:\\DOCUMENTI_CLI\\PDF\\{lastGestionalePdfPath}" })
-// → "E:\DOCUMENTI_CLI\PDF\" + "E:\DOCUMENTI_CLI\Elaborati\OrdCli_...pdf"
+FileWrite({ path: "<WORK_ROOT>\\PDF\\{lastGestionalePdfPath}" })
+// → "<WORK_ROOT>\PDF\" + "<WORK_ROOT>\Elaborati\OrdCli_...pdf"
 ```
 
 ### Fix
@@ -84,7 +84,7 @@ la directory hardcoded nel path di FileWrite.
 ### Sintomo
 ```
 JsonToFile: path non valido: Path assoluto non ammesso:
-E:\DOCUMENTI_CLI\log\Semplifica GAZZA Ordine Cliente_20260710121906.json
+<WORK_ROOT>\log\Semplifica <NOME_AGENTE>_20260710121906.json
 ```
 
 ### Causa
@@ -100,7 +100,7 @@ return { logJsonString: JSON.stringify(logObj, null, 2) };
 
 // Step 2 — FileWrite con @continueOnFail
 FileWrite({
-  path: "E:\\DOCUMENTI_CLI\\log\\{agentName}_{timestamp}.json",
+  path: "<WORK_ROOT>\\log\\{agentName}_{timestamp}.json",
   content: "{logJsonString}",   // qui content è embedded come valore stringa
   append: false,
   createDirectories: true
@@ -246,7 +246,7 @@ documento ORD_CLI identico.
 ### Fix
 Due livelli di protezione, entrambi consigliati in produzione (vedi
 `../dsl/pattern.md` §A8/§A12, confermati dal flusso
-reale GAZZA Ordine Cliente v1.4.1):
+reale CLI-A Ordine Cliente v1.4.1):
 1. **Idempotenza sullo step di creazione**: `idempotencyKey` costruita da un
    identificativo di business stabile, es. `hash(codCf + '|' + numeroOrdine + '|' + dataOrdine)`
    — mai timestamp/GUID.
@@ -261,8 +261,8 @@ GestionaleSend({
   endpoint: "documento",
   resource: "ORD_CLI",
   body: "{docBody}",
-  idempotencyKey: "gazza-ord-{orderBusinessKey}",
-  idempotencyGroup: "gazza-doc-creation",
+  idempotencyKey: "ordcli-ord-{orderBusinessKey}",
+  idempotencyGroup: "ordcli-doc-creation",
   timeoutSeconds: 60
 });
 ```
