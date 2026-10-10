@@ -38,13 +38,16 @@ procedi direttamente.
 ## 4. Formato di consegna
 1. **File DSL** (`<nome-flusso>.js`): intestazione fissa, solo codice + `// @alias`,
    `// @continueOnFail`, `// @foreach`. Niente commenti esplicativi.
-2. **Scheda di accompagnamento** (`<nome-flusso>.md`): scopo, trigger da configurare,
-   chiavi di config, tabelle/DDL richieste, passi manuali in Studio, test di collaudo.
-3. **Esito del validatore**: `python scripts/valida_flusso.py <file>` → 0 errori, 0 avvisi
-   (o avvisi giustificati uno per uno).
+2. **Note manutentori** (`NOTE_MANUTENTORI_<nome-flusso>.md`): scopo, trigger da configurare,
+   chiavi di config, tabelle/DDL richieste, passi manuali in Studio, cronistoria bug, test di
+   collaudo. Distingui sempre ciò che è **verificato sul sistema reale** da ciò che è **testato
+   solo su dati sintetici** (`test_codejs.py --run`).
+3. **Esito dei controlli**: `valida_flusso.py` → 0 errori, 0 avvisi (o avvisi giustificati uno
+   per uno) e `test_codejs.py` → 0 errori. Nessuno dei due intercetta bug sulla forma dei dati a
+   runtime: per quelli servono CSV di run e dump StepData.
 4. **Passi manuali** sempre elencati nel messaggio: pannello Gestione errori del ForEach,
-   configurazione trigger, credenziale di produzione (no dry-run), tabelle da creare, cartelle
-   IMAP/disco da predisporre.
+   configurazione trigger, credenziale di produzione **letterale** in ogni `GestionaleSend`
+   (no dry-run), tabelle da creare, cartelle IMAP/disco da predisporre.
 5. **Piano di collaudo** (3-5 casi): caso felice, documento ambiguo, ERP irraggiungibile,
    duplicato, file corrotto. Per ognuno: cosa controllare in Cronologia (step verdi con
    `↺ replay` = NON eseguiti).

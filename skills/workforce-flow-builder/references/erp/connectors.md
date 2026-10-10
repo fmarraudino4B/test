@@ -398,7 +398,7 @@ Markdown({
 
 ```javascript
 SendEmail({
-  to:          ['fra.marraudino@gmail.com'],
+  to:          ['notifiche@example.com'],
   subject:     "{mailSubjectFinal}",
   body:        "{lastMarkdownHtml}",
   bodyIsHtml:  true,

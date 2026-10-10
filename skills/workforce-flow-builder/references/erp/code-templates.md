@@ -380,7 +380,7 @@ return {
 
 ```javascript
 // @alias pdfPathOutput — cattura il path della stampa prodotta dal gestionale
-const path = String(stepData.lastGestionalePdfPath || $input.lastGestionalePdfPath || '');
+const path = ('' + (stepData.lastGestionalePdfPath || $input.lastGestionalePdfPath || ''));
 stepData.stampaPdfPath = path;
 stepData.stampaDisponibile = path ? 'true' : 'false';
 return { path: path, hasPdf: !!path };
@@ -485,7 +485,7 @@ const scartati = stepData.articoliScartati || [];
 // Esclude dal conteggio le righe non di business (es. righe NOTA/commento):
 // altrimenti abbassano artificialmente la percentuale risolta.
 const righeRilevanti = trovati.length + scartati.filter(r => !/^Riga\b|^NOTA\b/i.test(r.motivo || '')).length;
-const soglia = Number(stepData.minPercentualeRisoltePerCreare || 60);
+const soglia = (+(stepData.minPercentualeRisoltePerCreare || 60));
 const resolvedPct = righeRilevanti > 0 ? Math.round((trovati.length / righeRilevanti) * 100) : 0;
 
 let esito, motivoErrore = '', controllaEsito = false;
@@ -522,7 +522,7 @@ codice articolo genera un errore di sintassi o, peggio, un filtro sbagliato.
 ```javascript
 // @alias escSql — escape apici per filtro SQL dinamico
 function escSql(v) {
-  return String(v == null ? '' : v).replace(/'/g, "''");
+  return ('' + (v == null ? '' : v)).replace(/'/g, "''");
 }
 return {
   currentCodArtEscaped: escSql(stepData.currentCodArt),
@@ -544,7 +544,7 @@ nel body verso TargetCross e lascia che sia `JSON.stringify` a serializzare il n
 ```javascript
 // @alias parseNumeroTC — normalizza numero PDF -> Number per il body TC
 function parseNumeroLoose(raw) {
-  let s = String(raw ?? '').trim().replace(/[^\d,.\-]/g, ''); // via valuta/unità (es. "2,43/EA")
+  let s = ('' + (raw ?? '')).trim().replace(/[^\d,.\-]/g, ''); // via valuta/unità (es. "2,43/EA")
   if (!s) return 0;
   const hasComma = s.includes(','), hasDot = s.includes('.');
   if (hasComma && hasDot) {
@@ -558,11 +558,11 @@ function parseNumeroLoose(raw) {
     // solo punti: "1.000" / "1.000.000" = migliaia (gruppi da 3 cifre), "75.6" = decimale
     if (/^\-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
   }
-  const n = Number(s);
-  return Number.isFinite(n) ? n : 0;
+  const n = (+(s));
+  return ((n) === (n) && (n) !== Infinity && (n) !== -Infinity) ? n : 0;
 }
 function toTcNum(n, decimals = 4) {
-  return Number(Number(n).toFixed(decimals));   // Number, NON stringa: JSON.stringify -> 5.5
+  return (+((+(n)).toFixed(decimals)));   // Number, NON stringa: JSON.stringify -> 5.5
 }
 // Uso: riga = { COD_ART, QUANT_RIGA: toTcNum(parseNumeroLoose(q)), PREZZO_LORDO_VU1: toTcNum(parseNumeroLoose(p)) }
 return { esempioParsed: parseNumeroLoose('2,43/EA'), esempioMigliaia: parseNumeroLoose('1.000'), esempioTc: toTcNum(2.43) };
@@ -582,7 +582,7 @@ Vedi `../dsl/pattern.md` §A12.
 
 ```javascript
 // @alias claimPrep — prepara correlationId e path "in lavorazione"
-const pdfPath = String(stepData.__loopItem || '');
+const pdfPath = ('' + (stepData.__loopItem || ''));
 const fileName = pdfPath.split(/[\\/]/).pop();
 return {
   fileCorrelationId: fileName + '-' + stepData.agentVersion,  // stabile, NON timestamp/GUID

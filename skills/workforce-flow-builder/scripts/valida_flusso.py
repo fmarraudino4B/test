@@ -13,6 +13,10 @@ Controlli (le sigle Rn rimandano alle Regole d'oro di SKILL.md):
   [ERRORE] idempotencyKey fissa, senza alcun {placeholder}                             (R10)
   [ERRORE] FileWrite con contenuto/percorso binario (PDF, base64, immagini)            (R12)
   [ERRORE] MailDisposition annidato o ripetuto                                         (R14)
+  [ERRORE] GestionaleSend con credentialName contenente un {placeholder}              (R19)
+  [AVVISO] String()/Number() nel codice CodeJs: non esistono nel sandbox              (R18)
+  [AVVISO] timeoutSeconds oltre il tetto di piattaforma (300 s)                        (R19)
+  [AVVISO] FileWrite su percorso assoluto: scrive nella sandbox interna               (R12)
   [AVVISO] nome-blocco DSL non confermato                     (dsl/nomi-blocchi.md)
   [AVVISO] responseFormat "report"                                                     (R1)
   [AVVISO] throw new Error dentro un ciclo for                                         (R2)
@@ -195,6 +199,9 @@ def analizza(testo):
                 scritte.add(m.group(1))
             for m in re.finditer(r'(?:^\s*|[{,]\s*)["\']?([A-Za-z_]\w*)["\']?\s*:(?!:)', code):
                 scritte.add(m.group(1))
+            for m in re.finditer(r'(?<![\w.$])(String|Number)\s*[.(]', code):
+                avvisi.append(f"riga {i}: {m.group(1)}() usato in CodeJs: nel sandbox non esiste, "
+                              f"usa '' + v (stringa) o +v (numero) (R18).")
             for m in re.finditer(r'(["\'])[^"\']*?\{([A-Za-z_]\w*)\}[^"\']*?\1', code):
                 avvisi.append(f"riga {i}: placeholder '{{{m.group(2)}}}' dentro il codice JS: in CodeJs "
                               f"non viene sostituito, leggi stepData.{m.group(2)} (R-08).")
@@ -287,6 +294,13 @@ def analizza(testo):
             if nome == "FileMove" and re.search(r'overwrite\s*:\s*true', t):
                 avvisi.append(f"riga {riga}: idempotencyKey su FileMove overwrite:true, gia' "
                               f"idempotente: rischio replay senza spostamento (R10).")
+        cred = re.search(r'credentialName\s*:\s*"([^"]*)"', t)
+        if nome == "GestionaleSend" and cred and "{" in cred.group(1):
+            errori.append(f"riga {riga}: credentialName '{cred.group(1)}' con placeholder: non viene "
+                          f"interpolato, scrivi il nome credenziale letterale (R19).")
+        to = re.search(r'timeoutSeconds\s*:\s*(\d+)', t)
+        if to and int(to.group(1)) > 300:
+            avvisi.append(f"riga {riga}: timeoutSeconds {to.group(1)} oltre il tetto di 300 s (R19).")
         if nome == "FileWrite":
             cont = re.search(r'content\s*:\s*"([^"]*)"', t)
             path = re.search(r'path\s*:\s*"([^"]*)"', t)
@@ -294,6 +308,9 @@ def analizza(testo):
                (path and re.search(r'(?i)\.(pdf|png|jpe?g|docx?|xlsx?)$', path.group(1))):
                 errori.append(f"riga {riga}: FileWrite usato per contenuto binario: scrive solo "
                               f"testo, il file non si aprira'. Stampa ERP -> lastGestionalePdfPath (R12).")
+            if path and re.match(r'([A-Za-z]:\\|\\\\)', path.group(1)):
+                avvisi.append(f"riga {riga}: FileWrite su percorso assoluto '{path.group(1)}': scrive "
+                              f"nella sandbox interna, non sul filesystem del cliente (R12).")
             if path and re.fullmatch(r'\{[^}]+\}', path.group(1)):
                 avvisi.append(f"riga {riga}: FileWrite con path = intera variabile "
                               f"'{path.group(1)}': non viene sostituita (erp/gotchas §1).")
@@ -364,6 +381,7 @@ for (const item of lastFileList) {
   Query({ sql: "SELECT 1", idempotencyKey: "q-{n}" });
   SqlInsert({ table: "T", values: {"A":"{n}"}, idempotencyKey: "fissa" });
   FileWrite({ path: "E:\\\\out\\\\{n}.pdf", content: "{lastGestionalePdf}" });
+  GestionaleSend({ credentialName: "{cred}", endpoint: "test", timeoutSeconds: 600 });
   // @continueOnFail
   if ($.n == "1") {
     MailDisposition({ outcome: "processed" });
@@ -396,6 +414,11 @@ def self_test():
         (not has(n, "'{n}'"), "outputKey conta come scritta"),
         (has(n, "cleanup"), "R5 cleanup"),
         (has(n, "righe di commento"), "R17 commenti"),
+        (has(e, "credentialName '{cred}'"), "R19 credenziale"),
+        (has(a, "600 oltre"), "R19 timeout"),
+        (has(a, "Number() usato in CodeJs"), "R18 Number"),
+        (has(a, "String() usato in CodeJs"), "R18 String"),
+        (has(a, "percorso assoluto"), "R12 FileWrite assoluto"),
         (not any("x == 5" in x for x in e), "if JS in CodeJs ignorato"),
     ]
     falliti = [nome for ok, nome in checks if not ok]

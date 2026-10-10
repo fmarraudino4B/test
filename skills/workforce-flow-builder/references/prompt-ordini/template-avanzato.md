@@ -112,7 +112,7 @@ BLOCCO 3 — SENTINELLA (fuori dal ForEach, in fondo al flusso, eseguito una vol
 | `{{CARTELLA_ERRORE}}` | Es. `E:\DispositiveAI\Ordini\ERRORE` |
 | `{{CARTELLA_REVIEW}}` | Es. `E:\DispositiveAI\Ordini\REVIEW` |
 | `{{EMAIL_OPERATORE}}` | Es. `sales@cliente.it` |
-| `{{EMAIL_CC}}` | Es. `supporto@fourbytes.it` |
+| `{{EMAIL_CC}}` | Es. `supporto@example.com` |
 | `{{NOME_AZIENDA_FORNITORE}}` / `{{PIVA_FORNITORE}}` | Ragione sociale e P.IVA della nostra azienda (mai il cliente) |
 | `{{CAUSALE_DOC}}` / `{{SERIE_DOC}}` / `{{DEPOSITO}}` | Parametri fissi documento ORD_CLI |
 | `{{SOGLIA_PERCENTUALE}}` | Es. `60` |

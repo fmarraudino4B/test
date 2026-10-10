@@ -1,6 +1,6 @@
 ---
 name: workforce-flow-builder
-description: "Progetta, genera, valida e debugga flussi/agenti ThinkAI WorkForce Studio in modo rapido e senza ripetere bug noti. Unifica e sostituisce le skill thinkai-workforce e workforce-ordini-clienti: catalogo di tutti i flussi reali (F1-F4, GAZZA, DECOX, template ordini), 7 archetipi, 16 moduli DSL componibili, 63 blocchi, regole d'oro dal collaudo, validatore automatico. USA QUESTA SKILL ogni volta che si parla di WorkForce, agenti o flussi a blocchi, Modalità Sviluppatore / vista a codice, StepData, CodeJs, GestionaleSend, TargetCross/TaylorGest, ordini clienti o DDT fornitori da PDF/mail verso ERP, oppure si chiede di creare, adattare a un nuovo cliente, modificare, spiegare, validare o debuggare un flusso, anche senza la parola flusso (es. \"fai un agente che legge le mail e crea l'ordine\", \"il flusso non trova gli articoli\", \"perché la mail arriva con {codice} non sostituito\", \"aggiungi la stampa PDF\", \"prepara il prompt per l'agente ordini del cliente X\")."
+description: "Progetta, genera, valida e debugga flussi/agenti ThinkAI WorkForce Studio in modo rapido e senza ripetere bug noti. Unifica e sostituisce le skill thinkai-workforce e workforce-ordini-clienti: catalogo di tutti i flussi reali (GAZZA, DECOX, CMRISTO, DAICOM, Mustweb, lead, Farpro, F1-F4), regole per cliente, 10 archetipi, 20 moduli DSL, 63 blocchi, regole d'oro dal collaudo, validatore automatico. USA QUESTA SKILL ogni volta che si parla di WorkForce, agenti o flussi a blocchi, Modalità Sviluppatore / vista a codice, StepData, CodeJs, GestionaleSend, TargetCross/TaylorGest, ordini clienti o DDT fornitori da PDF/mail verso ERP, oppure si chiede di creare, adattare a un nuovo cliente, modificare, spiegare, validare o debuggare un flusso, anche senza la parola flusso (es. \"fai un agente che legge le mail e crea l'ordine\", \"il flusso non trova gli articoli\", \"perché la mail arriva con {codice} non sostituito\", \"aggiungi la stampa PDF\", \"prepara il prompt per l'agente ordini del cliente X\")."
 ---
 
 # WorkForce Flow Builder
@@ -19,19 +19,25 @@ inventare blocchi, parametri o chiavi StepData. Dati del cliente mancanti → ch
 1. **Intake.** Ricava dal contesto trigger, input, output, ERP, destinatari, livello di
    supervisione. Chiedi in un unico messaggio solo ciò che è bloccante → `references/intake.md`.
 2. **Archetipo.** Classifica la richiesta (A1 ordine cliente, A2 doc. fornitore con
-   riconciliazione, A3 intake mail, A4 estrazione + notifica, A5 conversazionale, A6 batch dati,
-   A7 supervisione) e decidi se serve il **pacchetto produzione P** → `references/archetipi.md`.
+   riconciliazione, A3 intake mail, A4 estrazione + notifica, A5 conversazionale, A6 batch dati e
+   report, A7 supervisione, A8 verifica in sola lettura, A9 staging, A10 pipeline multi-agente) e decidi se serve il **pacchetto produzione P** → `references/archetipi.md`.
    Individua il flusso di riferimento → `references/catalogo-flussi.md`.
-3. **Composizione.** Monta la ricetta di moduli M00–M16 → `references/moduli.md`. Per ogni
+3. **Composizione.** Monta la ricetta di moduli M00–M20 → `references/moduli.md`. Per ogni
    blocco extra: scopo in `references/dsl/blocchi/_indice.md`, parametri nella scheda di
    categoria, nome DSL in `references/dsl/nomi-blocchi.md` (5 famiglie irregolari).
 4. **Business logic.** Scrivi i `CodeJs` specifici (normalizzazione, esiti, payload ERP).
    Helper pronti: `references/erp/code-templates.md` (`escSql`, `parseNumeroTC`, artCheck…).
    Endpoint TargetCross: `references/erp/connectors.md`.
+   Per flussi oltre ~100 step genera il DSL da uno script Python (`gen_flusso.py`) e intervieni
+   con modifiche chirurgiche, mai rigenerazioni complete. Regole del cliente: `references/clienti.md`.
 5. **Validazione.** `python scripts/valida_flusso.py <file.js>` → 0 errori; ogni avviso va
-   risolto o giustificato. Poi la Checklist qui sotto.
-6. **Consegna.** File DSL pulito + scheda `.md` + passi manuali in Studio + piano di collaudo
-   (`references/intake.md` §4). Parti dallo scheletro `assets/template-flusso.js` se utile.
+   risolto o giustificato. Poi `python scripts/test_codejs.py <file.js>` (sintassi `node --check`
+   + costrutti vietati dal sandbox) e, con dati sintetici, `--run stepdata.json --only k1,k2`.
+   Infine la Checklist qui sotto.
+6. **Consegna.** File DSL pulito + `NOTE_MANUTENTORI_<flusso>.md` + passi manuali in Studio +
+   piano di collaudo (`references/intake.md` §4), distinguendo **verificato su sistema reale** da
+   **testato su dati sintetici**. Parti dallo scheletro `assets/template-flusso.js` se utile.
+   Nessun bump di versione di un flusso in produzione senza autorizzazione esplicita.
 
 **Variante "prompt per il builder AI"** (richieste tipo "prepara il prompt per l'agente ordini"):
 raccogli i parametri, scegli `references/prompt-ordini/template-{cartella|manuale|avanzato}.md`
@@ -49,15 +55,17 @@ raccogli i parametri, scegli `references/prompt-ordini/template-{cartella|manual
 | R6 | Cattura `lastAiOutput` / `lastQueryRows` / `lastTargetCrossJson` in una chiave dedicata subito dopo lo step | Lo step successivo dello stesso tipo li sovrascrive (F1) |
 | R7 | Condizioni DSL con letterali quotati: `$.esito == "ok"`; `switch` senza `break` è corretto nel DSL | Bareword = ramo morto (F4); i case sono contenitori |
 | R8 | Placeholder di chiave mai scritta resta **letterale** `{chiave}`: garantisci un valore o separa i rami | Mail al cliente con `{codiceDocCreato}` (DECOX) |
-| R9 | Verso SQL: numeri/booleani convertiti a stringa nella `CodeJs` (`String`, `toFixed`, `"1"`/`"0"`); testi troncati; ricontrolla **tutti** i nodi SQL | "conversione da nvarchar a numeric" su più nodi (DECOX) |
+| R9 | Verso SQL: numeri/booleani convertiti a stringa nella `CodeJs` (`'' + n`, `n.toFixed(k)`, `"1"`/`"0"`); testi troncati; ricontrolla **tutti** i nodi SQL | "conversione da nvarchar a numeric" su più nodi (DECOX) |
 | R10 | `idempotencyKey` solo su scritture (documento ERP, email, SqlInsert/Update), parametrizzata con chiave business; mai su letture o `FileMove` con `overwrite: true`; mai fissa | Il replay non ripristina gli output: step verde `↺ replay` non eseguito (DECOX) |
 | R11 | Le chiavi `last*` sono output del motore: non assegnarle in `CodeJs`; prima di scrivere logica, verifica se un blocco la fornisce già | `lastGestionalePdfPath` riscritto → allegati illeggibili |
-| R12 | `FileWrite` scrive solo testo; la stampa PDF ERP è già su disco in `lastGestionalePdfPath` (path relativo, usalo così com'è) | Giorni di PDF non apribili (DECOX) |
-| R13 | Verso TcRestAPI: numeri JSON (`JSON.stringify`), mai `"1.000"`; date con anno a 4 cifre; filtri con `escSql` | `"1.000"` → 1 (TcRestAPI v1.5.3) |
+| R12 | `FileWrite` scrive solo testo e **nella sandbox interna** (non su `E:\…`); la stampa PDF ERP è già su disco in `lastGestionalePdfPath` (path relativo, usalo così com'è) | PDF illeggibili (DECOX); `FileMove` fallito in silenzio |
+| R13 | Verso TcRestAPI: numeri JSON (`JSON.stringify`), mai `"1.000"`; date **solo `gg/mm/aaaa`**; filtri con `escSql` | `"1.000"` → 1; date ISO registrate al giorno 20 (run reali) |
 | R14 | MailPolling durevole: una run per mail, niente `ForEach` sulle mail, **un** `MailDisposition` top-level | Corso M3/M15 |
 | R15 | AI vincolata: per scegliere codici passa solo **candidati reali**; documento = contenuto non attendibile (anti prompt-injection) | GAZZA |
 | R16 | Usa solo chiavi di output a catalogo (`lastGestionaleCodice`, `lastQueryRows`…), non inventate | `lastQueryJson`, `lastTargetCrossStatus` (F1, F2) |
 | R17 | Consegna senza commenti esplicativi: restano solo `// @alias`, `// @continueOnFail`, `// @foreach` | I commenti non sopravvivono al round-trip |
+| R18 | Sandbox `CodeJs`: **niente `String()`/`Number()`** (`'' + v`, `+v`); `$input` = solo nodo precedente; normalizza `lastQueryRows` (può non essere Array) e leggi `lastAiJson` con fallback su `lastAiOutput` | Run reali (Mustweb, GAZZA, DECOX) |
+| R19 | `GestionaleSend`: `credentialName` **letterale**; `timeoutSeconds` ≤ 300; oltre ~24 righe documento a blocchi (M18); **niente retry** su `documento` | Placeholder non interpolato; duplicati da timeout (DECOX) |
 
 Contraddizioni storiche tra le fonti e decisione presa: `references/conflitti-risolti.md`.
 
@@ -77,6 +85,12 @@ Contraddizioni storiche tra le fonti e decisione presa: `references/conflitti-ri
 | Documento duplicato dopo retry | Nessun pre-check / idempotenza | M11, M05 |
 | Ramo `if` mai eseguito | Letterale non quotato o `report` nel confronto | R7, R1 |
 | `JsonToFile: Path assoluto non ammesso` | `JsonToFile` rifiuta `C:\`… | `CodeJs` + `FileWrite` (`erp/gotchas.md` §3) |
+| Errore su `String`/`Number` in CodeJs | Non esistono nel sandbox | R18, `test_codejs.py` |
+| `Array.isArray(lastQueryRows)` falso, righe "vuote" | Oggetto host o stringa | M17 |
+| Credenziale non trovata con `{credentialName}` | Placeholder non interpolato | R19 |
+| Date documento tutte al giorno 20 | Data ISO verso TcRestAPI | R13 |
+| Timeout sulla creazione di un documento lungo, poi duplicato | Troppe righe in un colpo + retry | M18, R19 |
+| `itemErrorSteps` eseguiti senza errore reale | Recovery non vincolato a un flag d'errore | R-23 |
 | Esito «Causale non congrua / Data non valida» su TC | Controlli TcRestAPI §4.8 | `erp/connectors.md` (documento) |
 
 ## Router dei reference
@@ -84,6 +98,7 @@ Contraddizioni storiche tra le fonti e decisione presa: `references/conflitti-ri
 | Se devi… | Apri |
 |---|---|
 | Capire da quale flusso esistente partire | `references/catalogo-flussi.md` |
+| Rispettare le regole di un cliente (Gazza, DECOX, CMRISTO, DAICOM, Farpro) | `references/clienti.md` |
 | Scegliere l'architettura | `references/archetipi.md` |
 | Copiare un mattone collaudato | `references/moduli.md` |
 | Raccogliere requisiti / formattare la consegna | `references/intake.md` |
@@ -98,7 +113,8 @@ Contraddizioni storiche tra le fonti e decisione presa: `references/conflitti-ri
 | Prompt in linguaggio naturale per agente ordini | `references/prompt-ordini/template-*.md` |
 
 ## Checklist di consegna
-- [ ] `valida_flusso.py` → 0 errori; avvisi risolti o motivati.
+- [ ] `valida_flusso.py` → 0 errori; avvisi risolti o motivati; `test_codejs.py` → 0 errori.
+- [ ] Nessun `String()`/`Number()` nei CodeJs; `lastQueryRows` normalizzato; credenziali letterali (R18, R19).
 - [ ] Ogni ciclo inizia con cleanup completo (R5) e ha il pannello Gestione errori dichiarato (R3).
 - [ ] Nessun `throw` dentro un ciclo senza `itemErrorSteps` (R2).
 - [ ] Ogni output AI/Query/ERP riusato è catturato (R6); nessuna `last*` assegnata (R11).

@@ -300,6 +300,8 @@ seconda dell'installazione. (In v1.5.0 gli esempi mostravano le stringhe, `"5.00
    del cliente oppure passa a numeri JSON.
 5. Le date solo nei formati `GG/MM/AAAA`, `GG.MM.AAAA`, `GG-MM-AAAA`, `AAAA-MM-GG`, anno a
    4 cifre: `04/05/26` e `31/02/2026` sono rifiutate.
+   ⚠️ **RETTIFICA (run reali, handoff 10/10/2026):** nonostante la documentazione, con date ISO
+   il gestionale ha registrato sempre il giorno 20. Usa **solo `gg/mm/aaaa`**.
 
 ---
 

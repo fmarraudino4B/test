@@ -116,4 +116,4 @@ Regole:
 | `{{CARTELLA_INPUT}}` | Es. `C:\AggCross\DocOrdCliGazza` |
 | `{{NOME_AZIENDA_FORNITORE}}` | Es. `Gazza Anselmo s.r.l.` |
 | `{{PIVA_FORNITORE}}` | Es. `00426440343` |
-| `{{EMAIL_NOTIFICA}}` | Es. `'dev@thinksoftware.it'` |
+| `{{EMAIL_NOTIFICA}}` | Es. `'ufficio@example.com'` |

@@ -109,7 +109,7 @@ Regole:
 | `{{CARTELLA_NON_ELAB}}` | Es. `E:\DOCUMENTI_CLI\NON_ELAB` |
 | `{{NOME_AZIENDA_FORNITORE}}` | Es. `Gazza Anselmo s.r.l.` |
 | `{{PIVA_FORNITORE}}` | Es. `00426440343` |
-| `{{EMAIL_NOTIFICA}}` | Es. `'fra.marraudino@gmail.com'` |
+| `{{EMAIL_NOTIFICA}}` | Es. `'notifiche@example.com'` |
 
 ## Note rispetto al template cartella
 

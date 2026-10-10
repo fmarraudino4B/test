@@ -32,6 +32,10 @@
 | M14 | Log/audit SQL sicuro | tracciabilità | GAZZA, DECOX |
 | M15 | Chiusura file + heartbeat | fine item / fine run | F2:261, GAZZA:#10-11 |
 | M16 | Intake mail durevole | ingresso da casella | corso M3/M15, A9 |
+| M17 | Lettura robusta output motore | ogni lettura di `lastQueryRows` / `lastAiJson` | Mustweb, GAZZA |
+| M18 | Documento a blocchi di righe | documenti con più di ~24 righe | DECOX Blocchi |
+| M19 | Conferma operatore | verifica con decisione umana | Fattura Fornitore Verifica |
+| M20 | Split PDF con CodePython | PDF lunghi o multi-documento | DECOX v1.1 |
 
 ---
 
@@ -44,7 +48,6 @@ SetFields({ assignments: [
   {"key":"inputDirectory","value":"<E:\\DOCUMENTI_CLI\\Agente\\in>"},
   {"key":"workRootIngresso","value":"<E:\\DOCUMENTI_CLI\\Agente\\in>"},
   {"key":"operatorEmail","value":"<ufficio@cliente.it>"},
-  {"key":"credentialName","value":"<TCCliente>"},
   {"key":"minPercentualeRisoltePerCreare","value":"60"},
   {"key":"agentVersion","value":"<NOME>-V1"}
 ] });
@@ -55,6 +58,9 @@ CodeJs({ outputKey: "runStamp" }, () => {
 });
 ```
 Valori sempre **stringa**. Mai valori segnaposto in produzione: M01 li intercetta.
+⚠️ La **credenziale di `GestionaleSend` NON va qui**: `credentialName` accetta solo una stringa
+letterale (i placeholder non vengono interpolati). Scrivila in chiaro in ogni step `GestionaleSend`
+e elencala tra i passi manuali di consegna.
 
 ## M01 — Preflight fail-closed
 **IN:** config M00. **OUT:** `configReady`, `configErrors`, `schemaReady`.
@@ -63,9 +69,9 @@ Fuori da ogni ciclo: qui `throw` è corretto (ferma la run PRIMA di toccare dati
 // @alias Valida configurazione
 CodeJs({ outputKey: "configCheck" }, () => {
   const err = [];
-  const v = k => String(stepData[k] || "").trim();
+  const v = k => ('' + (stepData[k] || "")).trim();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v("operatorEmail"))) err.push("operatorEmail non valida");
-  ["workRoot", "inputDirectory", "credentialName"].forEach(k => { if (!v(k) || /^CONFIGURARE|^</.test(v(k))) err.push(k + " non compilato"); });
+  ["workRoot", "inputDirectory"].forEach(k => { if (!v(k) || /^CONFIGURARE|^</.test(v(k))) err.push(k + " non compilato"); });
   stepData.configReady = err.length ? "false" : "true";
   stepData.configErrors = err.join(" | ");
   return { ok: !err.length };
@@ -74,12 +80,13 @@ if ($.configReady == "false") {
   throw new Error("Configurazione agente incompleta: {configErrors}");
 }
 // @alias Preflight ERP
-GestionaleSend({ credentialName: "{credentialName}", endpoint: "test", timeoutSeconds: 60 });
+GestionaleSend({ credentialName: "<CREDENZIALE_ERP>", endpoint: "test", timeoutSeconds: 60 });
 // @alias Preflight schema DB (solo se il flusso usa tabelle custom)
 Query({ sql: "SELECT COUNT(*) AS N FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME IN ('<PREFISSO>LOG','<PREFISSO>LOG_RIGHE')" });
 CodeJs({ outputKey: "schemaCheck" }, () => {
-  const rows = stepData.lastQueryRows || [];
-  const n = Number((rows[0] || {}).N || 0);
+  const normRows = v => { let r = v; if (typeof r === "string") { try { r = JSON.parse(r); } catch (e) { r = []; } } r = JSON.parse(JSON.stringify(r || [])); if (!Array.isArray(r)) r = r.rows || r.Rows || []; return r.map(o => { const u = {}; Object.keys(o || {}).forEach(k => { u[k.toUpperCase()] = o[k]; }); return u; }); };
+  const rows = normRows(stepData.lastQueryRows);
+  const n = +((rows[0] || {}).N || 0);
   stepData.schemaReady = n === 2 ? "true" : "false";   // conteggio ESATTO, non > 0
   return { n: n };
 });
@@ -97,8 +104,8 @@ FileList({ directory: "{workRoot}\\processing", pattern: "*.pdf", recursive: fal
 for (const item of lastFileList) {
   // @alias Calcola destinazione orfano
   CodeJs({ outputKey: "orfanoTargetPath" }, () => {
-    const nome = String(stepData.__loopItem || "").split("\\").pop().split("/").pop();
-    const dest = String(stepData.workRootIngresso || "").replace(/[\\/]+$/, "");
+    const nome = ('' + (stepData.__loopItem || "")).split("\\").pop().split("/").pop();
+    const dest = ('' + (stepData.workRootIngresso || "")).replace(/[\\/]+$/, "");
     stepData.orfanoTarget = dest + "\\" + nome;
     return stepData.orfanoTarget;
   });
@@ -149,9 +156,9 @@ pulizia, non sovrascrittura (R11 vieta di *assegnarle*).
 ```js
 // @alias Prepara claim
 CodeJs({ outputKey: "claimPrep" }, () => {
-  const nome = String(stepData.__loopItem || "").split(/[\\/]/).pop();
+  const nome = ('' + (stepData.__loopItem || "")).split(/[\\/]/).pop();
   stepData.inputFileName = nome;
-  stepData.processingPath = String(stepData.workRoot || "") + "\\processing\\" + nome;
+  stepData.processingPath = ('' + (stepData.workRoot || "")) + "\\processing\\" + nome;
   stepData.fileCorrelationId = nome + "|" + stepData.agentVersion + "|" + (stepData.runStamp || "");
   return stepData.fileCorrelationId;
 });
@@ -176,7 +183,7 @@ AiAnalysis({
 });
 // @alias Catch output estrazione
 CodeJs({ outputKey: "catchEstrazione" }, () => {
-  stepData.datiJsonRaw = String(stepData.lastAiOutput || $input.lastAiOutput || "{}");
+  stepData.datiJsonRaw = ('' + (stepData.lastAiOutput || $input.lastAiOutput || "{}"));
   return { len: stepData.datiJsonRaw.length };
 });
 ```
@@ -191,8 +198,9 @@ CodeJs({ outputKey: "catchEstrazione" }, () => {
 ## M07 — Normalizzazione (numeri, date, P.IVA)
 Riusa gli helper `escSql`, `parseNumeroTC` in `erp/code-templates.md`. Regole:
 - Verso **TcRestAPI**: numeri JSON (`Number`, `JSON.stringify`), mai separatore migliaia
-  (`"1.000"` → 1). Date `GG/MM/AAAA` o `AAAA-MM-GG`, anno a 4 cifre, data reale.
-- Verso **SQL** (`SqlInsert`/`SqlUpdate`): converti PRIMA in stringa nella `CodeJs`: `String(n)`
+  (`"1.000"` → 1). Date **solo `gg/mm/aaaa`**, anno a 4 cifre, data reale: in collaudo le date ISO
+  sono state registrate sempre al giorno 20. Attenzione allo slittamento di un giorno per UTC.
+- Verso **SQL** (`SqlInsert`/`SqlUpdate`): converti PRIMA in stringa nella `CodeJs`: `'' + n`
   interi, `n.toFixed(k)` decimali (scala della colonna), `"1"`/`"0"` booleani (R9).
 - Ogni valore interpolato in un `filtro` di `GestionaleSend` → `escSql` (apici raddoppiati).
 - Testi destinati a colonne SQL → tronca (250 per colonne brevi, 3990 per `nvarchar(4000)`).
@@ -201,23 +209,23 @@ Riusa gli helper `escSql`, `parseNumeroTC` in `erp/code-templates.md`. Regole:
 **IN:** `pivaEsc`, `ragSocPulitaEsc`. **OUT:** `codCf`, `ragSoc`, `clienteEsito`.
 ```js
 // @alias Cerca cliente per P.IVA
-GestionaleSend({ credentialName: "{credentialName}", endpoint: "clienti", filtro: "CF.P_IVA_CF='{pivaEsc}'", timeoutSeconds: 60 });
+GestionaleSend({ credentialName: "<CREDENZIALE_ERP>", endpoint: "clienti", filtro: "CF.P_IVA_CF='{pivaEsc}'", timeoutSeconds: 60 });
 // @alias Valuta risultato P.IVA
 CodeJs({ outputKey: "clientePiva" }, () => {
   let j; try { j = JSON.parse(stepData.lastTargetCrossJson || "{}"); } catch (e) { j = {}; }
   const rows = j.rows || j.Rows || [];
   stepData.clienteEsito = rows.length === 1 ? "trovato" : (rows.length > 1 ? "ambiguo" : "assente");
-  if (rows.length === 1) { stepData.codCf = String(rows[0].COD_CF || ""); stepData.ragSoc = String(rows[0].RAG_SOC_CF || ""); }
+  if (rows.length === 1) { stepData.codCf = ('' + (rows[0].COD_CF || "")); stepData.ragSoc = ('' + (rows[0].RAG_SOC_CF || "")); }
   return stepData.clienteEsito;
 });
 if ($.clienteEsito == "assente") {
   // @alias Fallback ragione sociale
-  GestionaleSend({ credentialName: "{credentialName}", endpoint: "clienti", filtro: "CF.RAG_SOC_CF LIKE '%{ragSocPulitaEsc}%'", timeoutSeconds: 60 });
+  GestionaleSend({ credentialName: "<CREDENZIALE_ERP>", endpoint: "clienti", filtro: "CF.RAG_SOC_CF LIKE '%{ragSocPulitaEsc}%'", timeoutSeconds: 60 });
   CodeJs({ outputKey: "clienteRagSoc" }, () => {
     let j; try { j = JSON.parse(stepData.lastTargetCrossJson || "{}"); } catch (e) { j = {}; }
     const rows = j.rows || j.Rows || [];
     stepData.clienteEsito = rows.length === 1 ? "trovato" : "revisione";   // >1 = revisione, MAI indovinare
-    if (rows.length === 1) { stepData.codCf = String(rows[0].COD_CF || ""); stepData.ragSoc = String(rows[0].RAG_SOC_CF || ""); stepData.piva = String(rows[0].P_IVA_CF || stepData.piva || ""); }
+    if (rows.length === 1) { stepData.codCf = ('' + (rows[0].COD_CF || "")); stepData.ragSoc = ('' + (rows[0].RAG_SOC_CF || "")); stepData.piva = ('' + (rows[0].P_IVA_CF || stepData.piva || "")); }
     return stepData.clienteEsito;
   });
 }
@@ -246,8 +254,8 @@ CodeJs({ outputKey: "esitoCalc" }, () => {
   const ko = (stepData.articoliScartati || []).filter(r => r.tipo !== "NOTA").length;  // righe non di business fuori dal denominatore
   const tot = ok + ko;
   const pct = tot ? Math.round(ok * 100 / tot) : 0;
-  const soglia = Number(stepData.minPercentualeRisoltePerCreare || 100);
-  stepData.resolvedPct = String(pct);
+  const soglia = (+(stepData.minPercentualeRisoltePerCreare || 100));
+  stepData.resolvedPct = ('' + (pct));
   stepData.esito = !stepData.codCf ? "revisione" : (pct >= soglia ? (ko ? "parziale" : "ok") : "revisione");
   return stepData.esito;
 });
@@ -258,22 +266,26 @@ in revisione ordini sopra soglia (bug GAZZA).
 ## M11 — Creazione documento idempotente
 ```js
 // @alias Pre-check duplicato
-GestionaleSend({ credentialName: "{credentialName}", endpoint: "documenti", resource: "<ORD_CLI>", filtro: "<NUM_ORDINE_CLIENTE='{numOrdineEsc}' AND COD_CF='{codCf}'>", timeoutSeconds: 60 });
+GestionaleSend({ credentialName: "<CREDENZIALE_ERP>", endpoint: "documenti", resource: "<ORD_CLI>", filtro: "<NUM_ORDINE_CLIENTE='{numOrdineEsc}' AND COD_CF='{codCf}'>", timeoutSeconds: 60 });
 /* CodeJs → stepData.duplicato = "true"/"false" */
 if ($.duplicato == "false") {
   // @alias Crea documento
   // @continueOnFail
-  GestionaleSend({ credentialName: "{credentialName}", endpoint: "documento", resource: "<ORD_CLI>", payloadFromKey: "docBody", timeoutSeconds: 120,
+  GestionaleSend({ credentialName: "<CREDENZIALE_ERP>", endpoint: "documento", resource: "<ORD_CLI>", payloadFromKey: "docBody", timeoutSeconds: 120,
     idempotencyKey: "doc-{orderBusinessKey}", idempotencyGroup: "<flusso>-doc" });
   // @alias Verifica creazione
   CodeJs({ outputKey: "checkDoc" }, () => {
-    stepData.codiceDocCreato = String(stepData.lastGestionaleCodice || "");
+    stepData.codiceDocCreato = ('' + (stepData.lastGestionaleCodice || ""));
     stepData.docCreato = stepData.codiceDocCreato ? "true" : "false";
     return stepData.docCreato;
   });
 }
 ```
 `orderBusinessKey` = hash/concatenazione `codCf|numeroOrdine|dataOrdine` (business, non run).
+- `timeoutSeconds` ha un tetto di piattaforma di **300 s**.
+- **Niente retry automatico** sullo step `documento`: dopo un timeout il documento può essere già
+  stato creato lato server e il retry genera un duplicato (DECOX). Verifica con il pre-check.
+- Oltre **~24 righe** in un colpo la creazione va in timeout: usa M18 (righe a blocchi).
 Leggi solo output a catalogo (`lastGestionaleCodice`, `lastGestionaleEsito`, `lastTargetCrossJson`),
 non chiavi inventate tipo `lastTargetCrossStatus` (B6). Controlli TcRestAPI §4.8 (causale, cliente,
 data) → messaggio in `Esito`: vedi `erp/connectors.md`.
@@ -281,10 +293,10 @@ data) → messaggio in `Esito`: vedi `erp/connectors.md`.
 ## M12 — Stampa PDF documento
 ```js
 // @continueOnFail
-GestionaleSend({ credentialName: "{credentialName}", endpoint: "documenti-stampa", resource: "<ORD_CLI>", docId: "{codiceDocCreato}", timeoutSeconds: 120 });
+GestionaleSend({ credentialName: "<CREDENZIALE_ERP>", endpoint: "documenti-stampa", resource: "<ORD_CLI>", docId: "{codiceDocCreato}", timeoutSeconds: 120 });
 // @alias Cattura path stampa
 CodeJs({ outputKey: "pdfStampaOutput" }, () => {
-  const path = String(stepData.lastGestionalePdfPath || $input.lastGestionalePdfPath || "");
+  const path = ('' + (stepData.lastGestionalePdfPath || $input.lastGestionalePdfPath || ""));
   stepData.stampaPdfPath = path;
   stepData.stampaDisponibile = path ? "true" : "false";
   return { path: path, hasPdf: !!path };
@@ -298,7 +310,7 @@ Il PDF è già su disco (path relativo alla working dir del motore, nome = codic
 ```js
 // @alias Componi corpo email
 AiAnalysis({ prompt: "Scrivi in markdown il riepilogo: esito {esito}, documento {codiceDocCreato}, righe risolte {resolvedPct}%. Nessuna firma.", responseFormat: "text" });
-CodeJs({ outputKey: "catchMail" }, () => { stepData.mailBodyMd = String(stepData.lastAiOutput || ""); return stepData.mailBodyMd.length; });
+CodeJs({ outputKey: "catchMail" }, () => { stepData.mailBodyMd = ('' + (stepData.lastAiOutput || "")); return stepData.mailBodyMd.length; });
 Markdown({ direction: "mdToHtml", sourceKey: "mailBodyMd", outputKey: "lastMarkdownHtml" });
 if ($.stampaDisponibile == "true") {
   // @continueOnFail
@@ -317,10 +329,10 @@ valorizzala prima con fallback esplicito o usa due `SendEmail` distinti. Mai `{T
 ```js
 // @alias Prepara riga log
 CodeJs({ outputKey: "logPrep" }, () => {
-  const t = (v, n) => { const s = v == null ? "" : String(v); return s.length > n ? s.substring(0, n - 3) + "..." : s; };
+  const t = (v, n) => { const s = v == null ? "" : ('' + (v)); return s.length > n ? s.substring(0, n - 3) + "..." : s; };
   stepData.logEsito = t(stepData.esito, 30);
   stepData.logMotivo = t(stepData.esitoMotivo, 250);
-  stepData.logPct = String(Number(stepData.resolvedPct || 0));
+  stepData.logPct = ('' + ((+(stepData.resolvedPct || 0))));
   stepData.logDocId = stepData.codiceDocCreato || "0";
   return { ok: true };
 });
@@ -339,9 +351,11 @@ FileMove({ source: "{processingPath}", target: "{workRoot}\\{cartellaEsito}\\{in
 ```
 `cartellaEsito` (ELABORATO / REVIEW / ERRORE) calcolata in `CodeJs`. Niente `idempotencyKey`
 su un `FileMove` con `overwrite: true` (già idempotente). Destinazione mai dentro la sorgente (F2).
-Heartbeat fuori dal ciclo: `CodeJs` → `heartbeatJson`, poi
-`FileWrite({ path: "{workRoot}\\_worker-attivo.json", content: "{heartbeatJson}", append: false })`
-(FileWrite = solo testo: qui è l'uso corretto).
+Heartbeat fuori dal ciclo: `CodeJs` → `heartbeatJson`, poi `FileWrite` con path **relativo**.
+⚠️ `FileWrite` scrive nella **sandbox interna** del motore, non sui percorsi assoluti del filesystem
+del cliente: un heartbeat o un file da spostare poi con `FileMove` su `E:\…` non esiste dove
+pensi (in un run reale ha prodotto un `FileMove` fallito in silenzio sotto `@continueOnFail`).
+Per un heartbeat leggibile dall'esterno preferisci una riga `SqlUpdate` su tabella di stato.
 
 ## M16 — Intake mail durevole (trigger MailPolling)
 Trigger configurato in Studio (non è nel DSL). La run riguarda **una sola** mail:
@@ -362,3 +376,57 @@ MailDisposition({ action: "moveAndMarkRead", targetFolder: "<Elaborate>", outcom
 - Idempotenza effetti esterni con chiave da `inboundMailId`.
 - `createTargetFolder: false` in produzione (cartelle create nel preflight IMAP).
 - Il blocco `MailRead` (batch → `lastEmails`) resta valido solo per letture non durevoli.
+
+## M17 — Lettura robusta degli output del motore
+Nel sandbox `CodeJs`: **niente `String()`/`Number()`** (usa `'' + v` e `+v`), `$input` contiene solo
+l'output del nodo **immediatamente precedente** (quindi `stepData.x || $input.x`), commit con
+`Object.assign(stepData, result)`.
+```js
+// @alias Normalizza righe query
+CodeJs({ outputKey: "righeDb" }, () => {
+  let r = stepData.lastQueryRows;
+  if (typeof r === "string") { try { r = JSON.parse(r); } catch (e) { r = []; } }
+  r = JSON.parse(JSON.stringify(r || []));
+  if (!Array.isArray(r)) r = r.rows || r.Rows || [];
+  const rows = r.map(o => { const u = {}; Object.keys(o || {}).forEach(k => { u[k.toUpperCase()] = o[k]; }); return u; });
+  Object.assign(stepData, { righeDb: rows, righeDbCount: '' + rows.length });
+  return rows;
+});
+// @alias Leggi JSON AI
+CodeJs({ outputKey: "aiDati" }, () => {
+  let j = stepData.lastAiJson;
+  if (!j || typeof j !== "object") {
+    const raw = ('' + (stepData.lastAiOutput || "")).replace(/```json|```/g, "").trim();
+    try { j = JSON.parse(raw || "{}"); } catch (e) { j = {}; }
+  }
+  stepData.aiDati = j;
+  return j;
+});
+```
+`lastQueryRows` può arrivare come oggetto host non Array (`Array.isArray` falso) o come stringa:
+il round-trip JSON e i nomi colonna in maiuscolo eliminano entrambi i casi. Nelle date lette dal DB
+controlla lo slittamento UTC (date mostrate un giorno indietro). Nelle join tra DB diversi
+esplicita la collation.
+
+## M18 — Documento a blocchi di righe
+1. `GestionaleSend` `endpoint: "documento"` con testata e **primo blocco** (≤ 24-30 righe).
+2. `CodeJs` che spezza le righe restanti in `blocchiRighe` (array di array) e salva il `docId`.
+3. `for (const item of blocchiRighe)` → `GestionaleSend` su `/documento-righe/{pDocId}` (endpoint
+   `documento-righe`, vedi `erp/connectors.md`). La numerazione righe è automatica lato Target.
+4. Ricalcolo totali **solo sull'ultimo blocco**.
+Ogni chiamata ha `idempotencyKey` con indice di blocco (`doc-{orderBusinessKey}-b{bloccoIdx}`).
+Riferimento reale: "DDT fornitori DEC Blocchi v1.0" (blocchi da 30 righe).
+
+## M19 — Conferma operatore (human-in-the-loop)
+Report markdown dei controlli → `SendAndWait` con le scelte (es. conferma / scarta) → Branch sulla
+risposta. Imposta timeout e valore di default (`continueWithDefault`) e definisci cosa succede alla
+scadenza. Vedi `dsl/modello-esecuzione.md` §4.4 e la scheda in `dsl/blocchi/comunicazione.md`.
+Riferimento: Fattura Fornitore Verifica v1.0 (Fase 3).
+
+## M20 — Split PDF con CodePython
+Per PDF lunghi (es. 34 pagine non scansionate) o con più documenti: uno step `CodePython` con
+`pythonPath` che punta a un interprete con `pypdf` produce i file `__pNNofMM.pdf`, poi un ciclo
+li elabora uno per uno. ⚠️ **DA VERIFICARE** la chiave di output: in DECOX lo split ha restituito
+"Nessuna risposta JSON dallo script di spezzettamento" (ipotesi: errore Python, output in
+`lastItems` invece di `splitEsito`, input non ricevuto). Prima del collaudo fatti dare dump
+StepData/CSV di run e verifica dove il blocco scrive il risultato. Scheda: `dsl/blocchi/output-script.md`.
