@@ -1,0 +1,35 @@
+{
+  "_istruzioni": "Copia come <azienda>.privato.json (ignorato da git) e compila. Valori FITTIZI. Descrizione di ogni parametro: README.md e note dello step CONFIGURAZIONE AZIENDA.",
+  "agente": {
+    "nome": "Ordini Clienti - Azienda Esempio - V1.34",
+    "tag": "Azienda Esempio",
+    "credenzialeErp": "TCRESTAPI",
+    "prefissoIdempotenza": "esempio-ordcli"
+  },
+  "parametri": {
+    "ragioneSocialeAzienda": "Azienda Esempio",
+    "pivaAzienda": "01234567890",
+    "workRoot": "\\\\server\\ThinkAI\\Ordini_Clienti",
+    "operatorEmail": "workforce@think-ai.it",
+    "operatorEmailCc": "workforce@think-ai.it",
+    "prefissoOggettoMail": "[Ordini Clienti ESEMPIO]",
+    "agentCode": "ESEMPIO_ORD_CLI",
+    "agentVersion": "ESEMPIO-ORDCLI-V1.34",
+    "cartelleJson": [
+      { "nome": "Ordine_Diretto", "chiusura": false },
+      { "nome": "Ordine_Aperto", "chiusura": true }
+    ],
+    "depositiJson": [
+      { "deposito": "01", "nome": "Produzione", "causale": "OC01" },
+      { "deposito": "02", "nome": "Ricambi", "causale": "OC02", "serie": "R" }
+    ],
+    "causaleDefault": "",
+    "depositoDefault": "",
+    "serieDocRiserva": "",
+    "campiTestataJson": {},
+    "likeSuPivaEstera": "true",
+    "classeDocDms": "",
+    "pivaClientiMatricolaExcel": "",
+    "programmazioniJson": []
+  }
+}
