@@ -1,0 +1,42 @@
+{
+  "_istruzioni": "Copia come profilo-<cliente>.privato.json FUORI dal repository e compila. Valori <da compilare> = non noti: non inventarli. Tutti i valori in M00 sono stringhe.",
+  "identita": {
+    "agentVersion": "FATTSLOT-V1",
+    "ownName": "<da compilare>",
+    "ownVat": "<da compilare>",
+    "credenzialeErp": "<da compilare>",
+    "dbErp": "<da compilare>"
+  },
+  "cartelle": {
+    "workRoot": "<da compilare>",
+    "inputDirectory": "<workRoot>\\in",
+    "processingDirectory": "<workRoot>\\processing",
+    "cartellaElaborato": "<workRoot>\\ELABORATO",
+    "cartellaReview": "<workRoot>\\REVIEW",
+    "cartellaErrore": "<workRoot>\\ERRORE"
+  },
+  "notifiche": {
+    "operatorEmail": "<da compilare>",
+    "operatorEmailCc": ""
+  },
+  "fattibilita": {
+    "modalitaLettura": "<API|SQL: da decidere dopo la scoperta schema>",
+    "depositiPriorita": ["<da compilare>"],
+    "giorniTransitoDefault": "<da compilare>",
+    "giorniConsegnaDefault": "<da compilare>",
+    "calendarioLavorativo": {
+      "giorniLavorativi": ["lun", "mar", "mer", "gio", "ven"],
+      "festivi": []
+    },
+    "unitaTempoCicli": "<ore|giorni: da verificare>",
+    "tolleranzaGiorni": "0"
+  },
+  "soglie": {
+    "maxPerRun": "50"
+  },
+  "opzioni": {
+    "soloLettura": true,
+    "emailEsito": "DETTAGLIATA",
+    "allegaPdfOriginale": true
+  }
+}
