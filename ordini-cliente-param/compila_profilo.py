@@ -3,6 +3,7 @@
 
 Uso:  python compila_profilo.py profilo-<cliente>.privato.json [--flusso F.js] [--out OUT.js]
       python compila_profilo.py profilo-<cliente>.privato.json --schema   # solo lo script SQL delle tabelle
+      python compila_profilo.py profilo.json --parziale   # lascia i valori mancanti come <SEGNAPOSTO> e li elenca
 
 Sostituisce i <SEGNAPOSTO> del flusso con i valori del profilo (escape JS incluso), rifiuta
 valori mancanti o segnaposto residui e controlla la sintassi con `node --check` se disponibile.
@@ -66,25 +67,30 @@ def main():
     ap.add_argument("profilo")
     ap.add_argument("--flusso", default=FLUSSO)
     ap.add_argument("--out")
+    ap.add_argument("--parziale", action="store_true", help="non fallire sui valori mancanti: restano <SEGNAPOSTO> (il preflight del flusso blocca l'esecuzione)")
     ap.add_argument("--schema", action="store_true", help="genera solo lo script SQL delle tabelle (serve solo il prefisso)")
     a = ap.parse_args()
     profilo = json.load(open(a.profilo, encoding="utf-8"))
     if a.schema:
         return schema(profilo, a.out)
     src = open(a.flusso, encoding="utf-8").read()
-    errori = []
+    errori, mancanti = [], []
     for k, (v, obbligatorio) in mappa(profilo).items():
         if obbligatorio and not str(v).strip():
-            errori.append(f"valore mancante per <{k}>")
+            if a.parziale:
+                mancanti.append(k)
+            else:
+                errori.append(f"valore mancante per <{k}>")
             continue
         if "<" in str(v) and re.search(r"<[A-Z0-9_]+>", str(v)):
             errori.append(f"<{k}>: il valore contiene un segnaposto")
             continue
         src = src.replace(f"<{k}>", json.dumps(str(v), ensure_ascii=False)[1:-1])
-    if not re.fullmatch(r"\d{11}", str(profilo.get("identita", {}).get("ownVat", ""))):
+    piva = str(profilo.get("identita", {}).get("ownVat", ""))
+    if not re.fullmatch(r"\d{11}", piva) and not (a.parziale and piva == ""):
         errori.append("ownVat: servono 11 cifre")
     residui = sorted(set(re.findall(r"<[A-Z][A-Z0-9_]{3,}>", src)))
-    if residui:
+    if residui and not a.parziale:
         errori.append("segnaposto non risolti: " + ", ".join(residui))
     if errori:
         sys.exit("ERRORE:\n  " + "\n  ".join(errori))
@@ -95,6 +101,8 @@ def main():
         if r.returncode:
             sys.exit("SINTASSI NON VALIDA:\n" + r.stderr)
     print("OK ->", out)
+    if a.parziale and residui:
+        print("DA COMPILARE a mano nel flusso (segnaposto residui):", ", ".join(residui))
 
 if __name__ == "__main__":
     main()

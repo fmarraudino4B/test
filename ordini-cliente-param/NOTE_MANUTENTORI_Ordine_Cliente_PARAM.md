@@ -16,6 +16,15 @@ Nessun dato reale di cliente in questa cartella (R20): il profilo reale è un fi
 Uso: `python compila_profilo.py profilo-<cliente>.privato.json` → `flusso-<cliente>.privato.json.js`
 da incollare in Studio. Il file compilato contiene dati reali: non committarlo.
 
+## Versione Decox (parziale)
+`Ordine_Cliente_DECOX_v2.0.0_flusso.js` è il DSL già compilato con ciò che è noto (agente `DECOX-V2.0.0`, nome breve, prefisso
+tabelle `THINKAI_DECOX_` [ipotesi], interruttori e DMS come nel flusso di riferimento, soglie 60/25). **Restano segnaposto** da
+sostituire prima dell'uso, nel primo step "Configurazione parametri": `<RAGIONE_SOCIALE_PROPRIA>`, `<PIVA_PROPRIA>`,
+`<WORK_ROOT>`, `<CARTELLA_INPUT>`, `<CARTELLA_DMS>`, `<EMAIL_OPERATORE>`, `<CAUSALE_DOC>`, `<SERIE_DOC>`, `<DEPOSITO>`.
+In più `<CREDENZIALE_ERP>` compare **11 volte** come valore letterale di `credentialName` (R19): sostituirla con trova-e-sostituisci
+(il preflight M00 non la vede). Finché mancano valori, il flusso si ferma al controllo iniziale elencando cosa manca.
+In alternativa compilare un profilo privato e rilanciare `compila_profilo.py` (senza `--parziale`).
+
 ## Cosa è stato parametrizzato (rispetto al flusso v1.5.6)
 - **Segnaposto non interpolabili dal motore** (R19): `<CREDENZIALE_ERP>` (11 `GestionaleSend`),
   `<PREFISSO_TABELLE>` (4 tabelle `…ORDINI_LOG`, `…ORDINI_LOG_RIGHE`, `…CLIENTI_PROFILO`, `…ARTICOLI_PROFILO`).
