@@ -133,3 +133,30 @@ versione parametrizzata** (non presenti nel flusso di riferimento così come era
 
 **Ancora manuale (R3):** configurare la *Gestione errori* del ForEach in Studio (continua sull'elemento in errore, fallisci a fine ciclo,
 `failedOrders`); senza, un file in errore ferma l'intera coda e il recovery non parte. Nell'import la nota del ForEach lo ricorda.
+
+---
+
+# Run 101 (primo PDF reale): memoria articoli condivisa col flusso DDT
+
+La run ha elaborato `…1MBOF-0001894.pdf` (estrazione AI, fornitore dal codice stampato, profilo di default) e si è fermata alla
+query "Consulta memoria autonoma articolo": `Il nome di colonna 'CODICE_CLIENTE_NORM' non è valido`.
+
+**Causa.** Nel database Decox `THINKAI_DECOX_ARTICOLI_PROFILO` esisteva già: è la memoria articoli del flusso **DDT fornitori**
+e usa `CODICE_FORNITORE_NORM` / `CODICE_FORNITORE_RAW` (più `LAST_LOG_KEY`). Lo script SQL non la ricrea se esiste, e il controllo
+iniziale verifica solo 6 colonne di auto-learning, quindi lo schema risultava "pronto". Le altre tre tabelle (`…ORDINI_LOG`,
+`…ORDINI_LOG_RIGHE`, `…CLIENTI_PROFILO`) sono quelle dell'ordine e coincidono col flusso.
+
+**Fix.** Il template fornitore ora usa `CODICE_FORNITORE_NORM/RAW` su `ARTICOLI_PROFILO` (lettura memoria, apprendimento, aggiornamento);
+il log righe `…ORDINI_LOG_RIGHE` mantiene `CODICE_CLIENTE_*` (struttura già creata). Nuovo `schema_tabelle_ordini_fornitore.sql`
+(`compila_profilo.py --schema --tipo fornitore`) con la stessa convenzione per installazioni nuove; `schema_tabelle_decox.sql` rigenerato.
+La tabella è **condivisa**: i codici fornitore appresi dal DDT servono anche agli ordini (e viceversa).
+
+**Da tenere d'occhio.**
+- Il codice normalizzato (`CODICE_FORNITORE_NORM`) nell'ordine è `MAIUSCOLO senza caratteri non alfanumerici`: verificare che il DDT usi la
+  stessa regola, altrimenti non ritrova le memorie (nessun errore, solo meno match).
+- L'ordine scrive `ORIGINE='IMPORT'`, `CREATED_BY='WORKFORCE_AUTO'`, `LAST_CORRELATION_ID`; il DDT usa anche `LAST_LOG_KEY` (non valorizzato dall'ordine).
+- Lo script non modifica tabelle esistenti: per future installazioni controllare sempre le colonne (non solo l'esistenza).
+
+**Ripetere la prova.** Il PDF è rimasto in `…\processing\<prefisso>_2026-1MBOF-0001894.pdf` (rimetterlo in `ORDINI` col nome originale);
+la riga di log `IN_ELABORAZIONE` viene chiusa come orfana al giro successivo. Configurare la Gestione errori del ForEach (R3), altrimenti
+un errore ferma tutta la coda.

@@ -1,6 +1,7 @@
 /* ============================================================================
    Ordine Cliente PARAM v2.0.0 (ThinkAI WorkForce) - Tabelle di appoggio - SQL Server
-   Derivato dallo script del flusso di riferimento v1.5.6: stessa struttura, prefisso parametrico
+   VARIANTE ORDINE FORNITORE: ARTICOLI_PROFILO con colonne CODICE_FORNITORE_NORM/RAW (come la memoria articoli del flusso DDT fornitori,
+   con cui la tabella puo' essere condivisa). Derivato dallo script del flusso di riferimento v1.5.6, prefisso parametrico
    THINKAI_DECOX_ (compila con: python compila_profilo.py <profilo> --schema).
 
    Crea le 4 tabelle usate dal flusso, nello schema dbo del database TARGETCROSS
@@ -11,6 +12,9 @@
      THINKAI_DECOX_ARTICOLI_PROFILO  memoria autonoma codice cliente -> COD_ART
      THINKAI_DECOX_ORDINI_LOG        audit per file elaborato (una riga per PDF)
      THINKAI_DECOX_ORDINI_LOG_RIGHE  audit per riga ordine (dashboard anomalie)
+
+   ATTENZIONE: se la tabella ARTICOLI_PROFILO esiste gia' (es. creata dal flusso DDT) lo script NON la modifica: verifica che abbia
+   CODICE_FORNITORE_NORM / CODICE_FORNITORE_RAW e le 6 colonne di auto-learning.
 
    Caratteristiche
    - Idempotente: si puo' rieseguire; crea solo cio' che manca.
@@ -99,7 +103,7 @@ BEGIN TRY
 
     ------------------------------------------------------------------------
     -- 2. THINKAI_DECOX_ARTICOLI_PROFILO  (memoria autonoma / auto-learning)
-    --    Chiave logica: (COD_CF, CODICE_CLIENTE_NORM). Il flusso la tratta come
+    --    Chiave logica: (COD_CF, CODICE_FORNITORE_NORM). Il flusso la tratta come
     --    univoca: una riga disattivata blocca il reinserimento e un duplicato e'
     --    "Memoria duplicata" (aggiornamento bloccato). L'unicita' lo rende impossibile.
     --    Il flusso consulta solo righe con ATTIVO = 1 AND APPROVATO = 1.
@@ -114,8 +118,8 @@ BEGIN TRY
             ID                   bigint         IDENTITY(1,1) NOT NULL
                                  CONSTRAINT PK_THINKAI_DECOX_ARTICOLI_PROFILO PRIMARY KEY,
             COD_CF               ' + @tCodCf + N' NOT NULL,
-            CODICE_CLIENTE_NORM  nvarchar(200)  NOT NULL,
-            CODICE_CLIENTE_RAW   nvarchar(200)  NULL,
+            CODICE_FORNITORE_NORM  nvarchar(200)  NOT NULL,
+            CODICE_FORNITORE_RAW   nvarchar(200)  NULL,
             COD_ART              ' + @tCodArt + N' NOT NULL,
             APPROVATO            bit            NOT NULL
                                  CONSTRAINT DF_THINKAI_DECOX_ARTICOLI_PROFILO_APPROVATO DEFAULT (0),
@@ -136,7 +140,7 @@ BEGIN TRY
             UPDATED_AT_UTC       datetime2(3)   NULL
         );
         CREATE UNIQUE NONCLUSTERED INDEX UX_THINKAI_DECOX_ARTICOLI_PROFILO_CHIAVE
-            ON dbo.THINKAI_DECOX_ARTICOLI_PROFILO (COD_CF, CODICE_CLIENTE_NORM);';
+            ON dbo.THINKAI_DECOX_ARTICOLI_PROFILO (COD_CF, CODICE_FORNITORE_NORM);';
         EXEC sys.sp_executesql @sql;
     END;
 

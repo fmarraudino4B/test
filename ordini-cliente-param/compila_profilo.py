@@ -70,11 +70,11 @@ def mappa(p):
         "USA_CODICE_STAMPATO": (b(o.get("usaCodiceFornitoreStampato", False)), True),
     }
 
-def schema(profilo, out):
+def schema(profilo, out, tipo="cliente"):
     prefisso = str(profilo.get("identita", {}).get("prefissoTabelle", "")).strip()
     if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{2,40}_", prefisso):
         sys.exit("ERRORE: identita.prefissoTabelle deve essere un identificatore SQL che finisce con '_' (es. THINKAI_CLIENTE_)")
-    src = open(os.path.join(QUI, "schema_tabelle_ordini.sql"), encoding="utf-8").read()
+    src = open(os.path.join(QUI, "schema_tabelle_ordini_fornitore.sql" if tipo == "fornitore" else "schema_tabelle_ordini.sql"), encoding="utf-8").read()
     src = src.replace("<PREFISSO_TABELLE>", prefisso)
     residui = sorted(set(re.findall(r"<[A-Z][A-Z0-9_]{3,}>", src)))
     if residui:
@@ -94,7 +94,7 @@ def main():
     a = ap.parse_args()
     profilo = json.load(open(a.profilo, encoding="utf-8"))
     if a.schema:
-        return schema(profilo, a.out)
+        return schema(profilo, a.out, a.tipo)
     src = open(a.flusso or os.path.join(QUI, FLUSSI[a.tipo]), encoding="utf-8").read()
     errori, mancanti = [], []
     for k, (v, obbligatorio) in mappa(profilo).items():

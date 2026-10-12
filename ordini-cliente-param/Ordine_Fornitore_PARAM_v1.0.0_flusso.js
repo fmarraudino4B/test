@@ -1690,7 +1690,7 @@ for (const item of lastFileList) {
         if ($.currentRowValid == "true") {
           // @alias Consulta memoria autonoma articolo
           Query({
-            sql: "SELECT TOP (2) P.COD_ART, P.MATCH_METHOD, P.VALIDATION_MODE, P.CONFIDENCE, A.DES_ART, A.UM_BASE FROM dbo.<PREFISSO_TABELLE>ARTICOLI_PROFILO AS P INNER JOIN ART_ANA AS A ON A.COD_ART = P.COD_ART WHERE P.COD_CF = {currentCodCf} AND P.CODICE_CLIENTE_NORM = {currentCodNorm} AND P.ATTIVO = 1 AND P.APPROVATO = 1 AND ISNULL(A.FLAG_OBSOLETO, 0) = 0 AND ISNULL(A.FLAG_INATTIVO, 0) = 0",
+            sql: "SELECT TOP (2) P.COD_ART, P.MATCH_METHOD, P.VALIDATION_MODE, P.CONFIDENCE, A.DES_ART, A.UM_BASE FROM dbo.<PREFISSO_TABELLE>ARTICOLI_PROFILO AS P INNER JOIN ART_ANA AS A ON A.COD_ART = P.COD_ART WHERE P.COD_CF = {currentCodCf} AND P.CODICE_FORNITORE_NORM = {currentCodNorm} AND P.ATTIVO = 1 AND P.APPROVATO = 1 AND ISNULL(A.FLAG_OBSOLETO, 0) = 0 AND ISNULL(A.FLAG_INATTIVO, 0) = 0",
             maxRows: 2
           });
 
@@ -2950,7 +2950,7 @@ for (const item of lastFileList) {
 
       // @alias Controlla memoria articolo esistente
       Query({
-        sql: "SELECT TOP (2) COD_ART, APPROVATO, ATTIVO, EVIDENCE_COUNT FROM dbo.<PREFISSO_TABELLE>ARTICOLI_PROFILO WHERE COD_CF = {learningCodCf} AND CODICE_CLIENTE_NORM = {learningCodeNorm}",
+        sql: "SELECT TOP (2) COD_ART, APPROVATO, ATTIVO, EVIDENCE_COUNT FROM dbo.<PREFISSO_TABELLE>ARTICOLI_PROFILO WHERE COD_CF = {learningCodCf} AND CODICE_FORNITORE_NORM = {learningCodeNorm}",
         maxRows: 2
       });
 
@@ -3007,8 +3007,8 @@ for (const item of lastFileList) {
         };
         var insert = Object.assign({
           COD_CF: clean(stepData.learningCodCf),
-          CODICE_CLIENTE_NORM: clean(stepData.learningCodeNorm),
-          CODICE_CLIENTE_RAW: clean(stepData.learningCodeRaw),
+          CODICE_FORNITORE_NORM: clean(stepData.learningCodeNorm),
+          CODICE_FORNITORE_RAW: clean(stepData.learningCodeRaw),
           CREATED_BY: "WORKFORCE_AUTO",
           CREATED_AT_UTC: now
         }, common);
@@ -3044,7 +3044,7 @@ for (const item of lastFileList) {
         SqlUpdate({
           table: "dbo.<PREFISSO_TABELLE>ARTICOLI_PROFILO",
           setKey: "profileUpdateSet",
-          where: "COD_CF = {learningCodCf} AND CODICE_CLIENTE_NORM = {learningCodeNorm}",
+          where: "COD_CF = {learningCodCf} AND CODICE_FORNITORE_NORM = {learningCodeNorm}",
           idempotencyKey: "ordcli-profile-update-{fileCorrelationId}-{learningCodeNorm}",
           idempotencyGroup: "ordcli-profile-memory",
           idempotencyRetryOnFailure: true
