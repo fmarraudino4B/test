@@ -10,7 +10,7 @@ Nessun dato reale di cliente in questa cartella (R20): il profilo reale è un fi
 | `Ordine_Cliente_PARAM_v2.0.0_flusso.js` | DSL "Modalità Sviluppatore" con segnaposto `<…>` |
 | `profilo-cliente-ordini.template.json` | Profilo da copiare come `profilo-<cliente>.privato.json` (fuori repo) |
 | `compila_profilo.py` | Sostituisce i segnaposto, rifiuta valori mancanti, controlla la sintassi; con `--schema` genera lo SQL delle tabelle |
-| `schema_tabelle_ordini.sql` | Script SQL idempotente delle 4 tabelle (segnaposto `<PREFISSO_TABELLE>`) |
+| `schema_tabelle_ordini.sql` | Script SQL delle 4 tabelle, **derivato dallo script originale del flusso di riferimento** con il solo prefisso parametrico `<PREFISSO_TABELLE>` |
 | `schema_tabelle_decox.sql` | Lo stesso script già compilato col prefisso `THINKAI_DECOX_` (prefisso ipotizzato: da confermare) |
 
 Uso: `python compila_profilo.py profilo-<cliente>.privato.json` → `flusso-<cliente>.privato.json.js`
@@ -32,7 +32,7 @@ da incollare in Studio. Il file compilato contiene dati reali: non committarlo.
 
 ## Passi manuali in Studio dopo l'import
 1. Creare la credenziale ERP con **lo stesso nome** usato nel profilo (letterale nel DSL). Verificare che **non sia in dry-run** (`erp/gotchas.md` §4).
-2. Eseguire sul DB collegato alla Chat lo **script di schema** (`schema_tabelle_*.sql`, vedi sotto); l'ultima SELECT deve dare 4 / 6 / 2.
+2. Eseguire sul DB collegato alla Chat lo **script di schema** (`schema_tabelle_*.sql`, vedi sotto); la SELECT finale deve dare `1, 1, 1, 1, 6, 2` (come il preflight del flusso). Eseguire prima sul database di TEST: lo script controlla che esistano `ART_ANA` e `CF_DEST_MERCE` e copia tipo/collation di `COD_CF` e `COD_ART` da TargetCross.
 3. Reimpostare il trigger (cron del flusso di riferimento: `*/30 * * * *`, da confermare).
 4. **R3**: configurare a mano la Gestione errori dei 3 ForEach (ordini → `failedOrders`, righe articolo → `failedArticleLines`,
    learning → `failedLearningMappings`; continua su errore item, fallisci a fine ciclo).
@@ -51,7 +51,7 @@ da incollare in Studio. Il file compilato contiene dati reali: non committarlo.
 5. DMS attivo: descrittore depositato e mail senza avvisi.
 
 ## Aperti / da decidere
-1. **DDL tabelle**: ricostruito dalle colonne che il flusso legge/scrive, non è lo script originale del flusso di riferimento (non fornito). Rispetto al DDL di esempio della skill ho allargato `EMAIL_ERRORE` (4000, il flusso tronca a 3990), `NOTE` (1000) e `NUMERO_ORDINE` (100): con le lunghezze dell'esempio le scritture sarebbero fallite. Da far rivedere al DBA; non eseguito su SQL Server reale (solo parsing T-SQL e confronto colonne flusso/DDL).
+1. **DDL tabelle**: usato lo script originale del flusso di riferimento (v1.5.6) cambiando solo il prefisso; confrontato riga per riga con il sorgente. Non eseguito su SQL Server qui: collaudare su TEST. Dipende da `ART_ANA` e `CF_DEST_MERCE` (stessa struttura TargetCross del cliente di riferimento: da confermare per il nuovo cliente).
 2. **R18**: il flusso usa `String()`/`Number()` in ~460 punti (errori di `test_codejs.py`, 0 di `valida_flusso.py`); in produzione sul flusso di riferimento funziona.
    Il codice aggiunto qui non li usa. Da confermare se il sandbox li accetta prima di toccare il resto.
 3. `FileWrite` con `{sentinellaSandboxPath}` e un `FileMove` senza `allowedRoot` (avvisi ereditati): non modificati.
