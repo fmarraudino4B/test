@@ -3624,6 +3624,7 @@ for (const item of lastFileList) {
   }
 }
 
+// ┌─ ON ITEM ERROR — itemErrorSteps del ForEach qui sopra (pannello Gestione errori).
 // @alias Prepara recovery errore tecnico
 CodeJs({ outputKey: "technicalLogUpdate" }, () => {
   function esc(value) {
@@ -3658,56 +3659,63 @@ CodeJs({ outputKey: "technicalLogUpdate" }, () => {
     + (afterCreate
       ? "<p><b>Attenzione:</b> il documento ERP risulta creato. Non reinserirlo manualmente senza la verifica duplicati.</p>"
       : "<p>Il file verra' spostato in error-tecnico, se ancora disponibile.</p>");
+  var failedItems = stepData.failedOrders;
+  var hasFailed = Array.isArray(failedItems) ? failedItems.length > 0
+    : (failedItems !== undefined && failedItems !== null && ("" + failedItems) !== "" && ("" + failedItems) !== "[]");
+  stepData.recoveryErrore = (("" + (stepData.__lastItemErrorMessage || "")) !== "" || hasFailed) ? "true" : "false";
   return update;
 });
 
-// @alias Apri log mancante (recovery errore precoce)
-// @continueOnFail
-SqlInsert({
-  table: "dbo.<PREFISSO_TABELLE>ORDINI_LOG",
-  rowsKey: "technicalLogStartRows",
-  idempotencyKey: "ordcli-log-start-{fileCorrelationId}",
-  idempotencyGroup: "ordcli-log-start",
-  idempotencyRetryOnFailure: true
-});
+// @alias Recovery solo con errore reale
+if ($.recoveryErrore == "true") {
+  // @alias Apri log mancante (recovery errore precoce)
+  // @continueOnFail
+  SqlInsert({
+    table: "dbo.<PREFISSO_TABELLE>ORDINI_LOG",
+    rowsKey: "technicalLogStartRows",
+    idempotencyKey: "ordcli-log-start-{fileCorrelationId}",
+    idempotencyGroup: "ordcli-log-start",
+    idempotencyRetryOnFailure: true
+  });
 
-// @alias Marca errore tecnico nel log
-// @continueOnFail
-SqlUpdate({
-  table: "dbo.<PREFISSO_TABELLE>ORDINI_LOG",
-  setKey: "technicalLogUpdate",
-  where: "CORRELATION_ID = {fileCorrelationId}",
-  idempotencyKey: "ordcli-log-technical-{fileCorrelationId}",
-  idempotencyGroup: "ordcli-log-final",
-  idempotencyRetryOnFailure: true
-});
+  // @alias Marca errore tecnico nel log
+  // @continueOnFail
+  SqlUpdate({
+    table: "dbo.<PREFISSO_TABELLE>ORDINI_LOG",
+    setKey: "technicalLogUpdate",
+    where: "CORRELATION_ID = {fileCorrelationId}",
+    idempotencyKey: "ordcli-log-technical-{fileCorrelationId}",
+    idempotencyGroup: "ordcli-log-final",
+    idempotencyRetryOnFailure: true
+  });
 
-// @alias Notifica errore tecnico
-// @continueOnFail
-SendEmail({
-  to: ["{operatorEmail}"],
-  cc: ["{operatorEmailCc}"],
-  subject: "{emailSubject}",
-  body: "{emailBody}",
-  bodyFormat: "html",
-  attachments: ["{currentFilePath}"],
-  idempotencyKey: "ordcli-email-technical-{fileCorrelationId}",
-  idempotencyGroup: "ordcli-email-final",
-  idempotencyRetryOnFailure: true
-});
+  // @alias Notifica errore tecnico
+  // @continueOnFail
+  SendEmail({
+    to: ["{operatorEmail}"],
+    cc: ["{operatorEmailCc}"],
+    subject: "{emailSubject}",
+    body: "{emailBody}",
+    bodyFormat: "html",
+    attachments: ["{currentFilePath}"],
+    idempotencyKey: "ordcli-email-technical-{fileCorrelationId}",
+    idempotencyGroup: "ordcli-email-final",
+    idempotencyRetryOnFailure: true
+  });
 
-// @alias Sposta file in error-tecnico
-// @continueOnFail
-FileMove({
-  source: "{currentFilePath}",
-  target: "{technicalErrorPath}",
-  overwrite: false,
-  createTargetDir: true,
-  allowedRoot: "{workRoot}",
-  idempotencyKey: "ordcli-move-technical-{fileCorrelationId}",
-  idempotencyGroup: "ordcli-file-terminal",
-  idempotencyRetryOnFailure: true
-});
+  // @alias Sposta file in error-tecnico
+  // @continueOnFail
+  FileMove({
+    source: "{currentFilePath}",
+    target: "{technicalErrorPath}",
+    overwrite: false,
+    createTargetDir: true,
+    allowedRoot: "{workRoot}",
+    idempotencyKey: "ordcli-move-technical-{fileCorrelationId}",
+    idempotencyGroup: "ordcli-file-terminal",
+    idempotencyRetryOnFailure: true
+  });
+}
 
 CodeJs({ outputKey: "sentinellaPrep" }, () => {
   stepData.sentinellaPath = String(stepData.inputDirectory || '').replace(/[\\/]+$/, '') + '\\_worker-attivo.json';
@@ -3721,14 +3729,13 @@ CodeJs({ outputKey: "sentinellaPrep" }, () => {
 });
 
 // @alias Scrivi sentinella (sandbox)
-FileWrite({ path: "{sentinellaSandboxPath}", content: "{sentinellaContenuto}", createDirectories: true });
+FileWrite({ path: "sentinella/_worker-attivo.json", content: "{sentinellaContenuto}", createDirectories: true });
 
 // @alias Deposita sentinella nella cartella ordini
 // @continueOnFail
 FileMove({
-  source: "{sentinellaSandboxPath}",
+  source: "{lastFileWritten}",
   target: "{sentinellaPath}",
   overwrite: true,
-  createTargetDir: true,
-  allowedRoot: "{workRoot}"
+  createTargetDir: true
 });

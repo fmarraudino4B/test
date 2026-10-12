@@ -110,3 +110,26 @@ Gli alias sono confrontati come parole intere sul testo normalizzato (maiuscolo,
 3. Verificare il nome campi `NUM_ORDINE_FORNITORE`/`DATA_ORDINE_FORNITORE`, `NUM_UM` e la politica prezzi.
 4. Credenziale ERP (`<CREDENZIALE_ERP>`, 11 punti) e tabelle `…CLIENTI_PROFILO` (contiene i profili fornitore: nome storico).
 5. Righe con data di consegna diverse: il flusso usa la prima in testata (come il flusso cliente).
+
+---
+
+# Correzioni dalla run 97 (collaudo Decox, 0 file in ingresso)
+
+La run ha passato configurazione, preflight TargetCross e controllo tabelle, poi ha mostrato due difetti **introdotti dalla mia
+versione parametrizzata** (non presenti nel flusso di riferimento così come era configurato in Studio). Corretti in tutti i template.
+
+1. **Recovery errore tecnico eseguito senza errore** (4 step rossi "idempotencyKey contiene placeholder non risolti": log, mail, spostamento file).
+   Causa: nell'import dal DSL i passi "ON ITEM ERROR" diventano normali step dopo il ciclo; avevo inoltre tolto il commento-marcatore
+   `// ┌─ ON ITEM ERROR …` insieme agli altri commenti (R17). Con 0 file i passi giravano comunque, e con file avrebbero potuto
+   spedire una mail di errore falsa.
+   Fix: lo step "Prepara recovery errore tecnico" imposta `recoveryErrore` (vero solo con `__lastItemErrorMessage` o `failedOrders`
+   valorizzati) e i 4 passi successivi stanno sotto `if ($.recoveryErrore == "true")` (regola R-23). Il marcatore è stato ripristinato.
+   Provato con tre stepdata: nessun errore → falso; con messaggio d'errore → vero; con elemento fallito → vero.
+2. **Sentinella `_worker-attivo.json` non depositata** ("Path di mutazione fuori dalla root consentita"). Due cause: il `FileWrite`
+   usava come path l'intera variabile `{sentinellaSandboxPath}` (non sostituita: il file veniva scritto con nome letterale, vedi
+   `erp/gotchas.md` §1) e il `FileMove` applicava `allowedRoot` anche al sorgente nella sandbox.
+   Fix: path letterale `sentinella/_worker-attivo.json`, sorgente `{lastFileWritten}` e nessun `allowedRoot` (come già il deposito
+   del descrittore DMS). ⚠️ Da riverificare in Studio: il file deve comparire nella cartella ordini a ogni giro.
+
+**Ancora manuale (R3):** configurare la *Gestione errori* del ForEach in Studio (continua sull'elemento in errore, fallisci a fine ciclo,
+`failedOrders`); senza, un file in errore ferma l'intera coda e il recovery non parte. Nell'import la nota del ForEach lo ricorda.
