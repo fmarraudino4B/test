@@ -2,6 +2,7 @@
 """Compila il flusso ordini cliente parametrico con un profilo cliente PRIVATO.
 
 Uso:  python compila_profilo.py profilo-<cliente>.privato.json [--flusso F.js] [--out OUT.js]
+      python compila_profilo.py profilo-<cliente>.privato.json --schema   # solo lo script SQL delle tabelle
 
 Sostituisce i <SEGNAPOSTO> del flusso con i valori del profilo (escape JS incluso), rifiuta
 valori mancanti o segnaposto residui e controlla la sintassi con `node --check` se disponibile.
@@ -47,13 +48,29 @@ def mappa(p):
         "ALIAS_CLIENTI": (o.get("aliasClienti", ""), False),
     }
 
+def schema(profilo, out):
+    prefisso = str(profilo.get("identita", {}).get("prefissoTabelle", "")).strip()
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{2,40}_", prefisso):
+        sys.exit("ERRORE: identita.prefissoTabelle deve essere un identificatore SQL che finisce con '_' (es. THINKAI_CLIENTE_)")
+    src = open(os.path.join(QUI, "schema_tabelle_ordini.sql"), encoding="utf-8").read()
+    src = src.replace("<PREFISSO_TABELLE>", prefisso)
+    residui = sorted(set(re.findall(r"<[A-Z][A-Z0-9_]{3,}>", src)))
+    if residui:
+        sys.exit("segnaposto non risolti: " + ", ".join(residui))
+    out = out or "schema-tabelle-" + prefisso.strip("_").lower() + ".privato.sql"
+    open(out, "w", encoding="utf-8").write(src)
+    print("OK ->", out)
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("profilo")
     ap.add_argument("--flusso", default=FLUSSO)
     ap.add_argument("--out")
+    ap.add_argument("--schema", action="store_true", help="genera solo lo script SQL delle tabelle (serve solo il prefisso)")
     a = ap.parse_args()
     profilo = json.load(open(a.profilo, encoding="utf-8"))
+    if a.schema:
+        return schema(profilo, a.out)
     src = open(a.flusso, encoding="utf-8").read()
     errori = []
     for k, (v, obbligatorio) in mappa(profilo).items():

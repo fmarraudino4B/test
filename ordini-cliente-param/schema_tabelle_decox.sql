@@ -1,0 +1,137 @@
+/* =====================================================================
+   SCHEMA TABELLE DI SUPPORTO - Agente Ordine Cliente PARAM v2.0.0
+   Database: quello collegato alla Chat/connessione dati dell'agente (schema dbo).
+   Prefisso: THINKAI_DECOX_   (deve coincidere con identita.prefissoTabelle del profilo)
+
+   Script IDEMPOTENTE: puo' essere rieseguito, crea solo cio' che manca. Nessun DROP, nessuna
+   scrittura su tabelle del gestionale.
+
+   Ricavato dalle colonne che il flusso legge/scrive (SqlInsert/SqlUpdate/Query) e dal preflight
+   dello step "Valida prerequisiti database" (4 tabelle; 6 colonne di auto-learning su
+   ARTICOLI_PROFILO; 2 su ORDINI_LOG_RIGHE).
+   Le lunghezze coprono i troncamenti del flusso: ERROR_DETAIL/EMAIL_ERRORE 3990, NOTE 1000,
+   NUMERO_ORDINE 100. NON e' uno script ufficiale del gestionale: fallo rivedere al DBA.
+   ===================================================================== */
+
+-- ===== CLIENTI_PROFILO: profilo per cliente (popolata a mano, il flusso la legge soltanto) ====
+IF OBJECT_ID(N'dbo.THINKAI_DECOX_CLIENTI_PROFILO', N'U') IS NULL
+BEGIN
+  CREATE TABLE dbo.THINKAI_DECOX_CLIENTI_PROFILO (
+    ID                  INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_THINKAI_DECOX_CLIENTI_PROFILO PRIMARY KEY,
+    COD_CF              NVARCHAR(50)  NOT NULL,
+    COD_CAUS_DOC        NVARCHAR(20)  NULL,   -- se vuoto: defaultCausale
+    SERIE_DOC           NVARCHAR(20)  NULL,   -- se vuoto: defaultSerie
+    COD_DEP             NVARCHAR(20)  NULL,   -- se vuoto: defaultDeposito
+    DESTINATION_POLICY  NVARCHAR(50)  NULL,   -- vuoto = REVIEW; WS_FIELDS = destinazione scritta via web service
+    ATTIVO              BIT           NOT NULL CONSTRAINT DF_THINKAI_DECOX_CLIENTI_PROFILO_ATTIVO DEFAULT 1,
+    CREATED_AT_UTC      DATETIME2     NOT NULL CONSTRAINT DF_THINKAI_DECOX_CLIENTI_PROFILO_CREATED DEFAULT SYSUTCDATETIME(),
+    UPDATED_AT_UTC      DATETIME2     NULL
+  );
+  CREATE UNIQUE INDEX UX_THINKAI_DECOX_CLIENTI_PROFILO_CODCF ON dbo.THINKAI_DECOX_CLIENTI_PROFILO (COD_CF);
+END
+GO
+
+-- ===== ARTICOLI_PROFILO: memoria codice cliente -> COD_ART (auto-learning) =================
+IF OBJECT_ID(N'dbo.THINKAI_DECOX_ARTICOLI_PROFILO', N'U') IS NULL
+BEGIN
+  CREATE TABLE dbo.THINKAI_DECOX_ARTICOLI_PROFILO (
+    ID                   INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_THINKAI_DECOX_ARTICOLI_PROFILO PRIMARY KEY,
+    COD_CF               NVARCHAR(50)  NOT NULL,
+    CODICE_CLIENTE_NORM  NVARCHAR(200) NOT NULL,
+    CODICE_CLIENTE_RAW   NVARCHAR(200) NULL,
+    COD_ART              NVARCHAR(50)  NOT NULL,
+    APPROVATO            BIT           NOT NULL CONSTRAINT DF_THINKAI_DECOX_ARTICOLI_PROFILO_APPR DEFAULT 0,
+    ATTIVO               BIT           NOT NULL CONSTRAINT DF_THINKAI_DECOX_ARTICOLI_PROFILO_ATT DEFAULT 1,
+    ORIGINE              NVARCHAR(30)  NULL,   -- il flusso scrive 'IMPORT'
+    MATCH_METHOD         NVARCHAR(30)  NULL,   -- colonna di auto-learning (1/6)
+    VALIDATION_MODE      NVARCHAR(30)  NULL,   -- (2/6)
+    CONFIDENCE           DECIMAL(4,3)  NULL,   -- (3/6) 0.000-1.000
+    EVIDENCE_COUNT       INT           NOT NULL CONSTRAINT DF_THINKAI_DECOX_ARTICOLI_PROFILO_EVC DEFAULT 1,  -- (4/6)
+    LAST_USED_AT_UTC     DATETIME2     NULL,   -- (5/6)
+    LAST_CORRELATION_ID  NVARCHAR(100) NULL,   -- (6/6)
+    NOTE                 NVARCHAR(1000) NULL,
+    CREATED_BY           NVARCHAR(50)  NULL,   -- il flusso scrive 'WORKFORCE_AUTO'
+    CREATED_AT_UTC       DATETIME2     NOT NULL CONSTRAINT DF_THINKAI_DECOX_ARTICOLI_PROFILO_CREATED DEFAULT SYSUTCDATETIME(),
+    UPDATED_AT_UTC       DATETIME2     NULL
+  );
+  CREATE UNIQUE INDEX UX_THINKAI_DECOX_ARTICOLI_PROFILO_CHIAVE
+    ON dbo.THINKAI_DECOX_ARTICOLI_PROFILO (COD_CF, CODICE_CLIENTE_NORM);
+END
+GO
+
+-- ===== ORDINI_LOG: una riga per file elaborato (audit) =====================================
+IF OBJECT_ID(N'dbo.THINKAI_DECOX_ORDINI_LOG', N'U') IS NULL
+BEGIN
+  CREATE TABLE dbo.THINKAI_DECOX_ORDINI_LOG (
+    ID                     INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_THINKAI_DECOX_ORDINI_LOG PRIMARY KEY,
+    CORRELATION_ID         NVARCHAR(100) NOT NULL,
+    AGENT_VERSION          NVARCHAR(50)  NULL,
+    FILE_NAME              NVARCHAR(400) NULL,
+    FILE_SOURCE            NVARCHAR(500) NULL,
+    STATO                  NVARCHAR(30)  NOT NULL,  -- IN_ELABORAZIONE | CREATO | CREATO_PARZIALE | DUPLICATO | ERRORE_ERP | REVISIONE | ERRORE_TECNICO | CREATO_ERRORE_TECNICO
+    DATA_INIZIO_UTC        DATETIME2     NOT NULL,
+    DATA_FINE_UTC          DATETIME2     NULL,
+    ERROR_CODE             NVARCHAR(50)  NULL,
+    ERROR_DETAIL           NVARCHAR(4000) NULL,
+    DETAIL_JSON            NVARCHAR(MAX) NULL,
+    PIVA                   NVARCHAR(20)  NULL,
+    COD_CF                 NVARCHAR(50)  NULL,
+    RAG_SOC                NVARCHAR(300) NULL,
+    NUMERO_ORDINE          NVARCHAR(100) NULL,
+    DATA_ORDINE            NVARCHAR(20)  NULL,      -- ISO aaaa-mm-gg, NULL se non valida
+    DESTINAZIONE_PRESENTE  BIT           NULL,
+    ERP_DOC_ID             NVARCHAR(50)  NULL,
+    RIGHE_TOTALI           INT           NULL,
+    RIGHE_RISOLTE          INT           NULL,
+    RIGHE_ANOMALE          INT           NULL,
+    EMAIL_STATO            NVARCHAR(30)  NULL,      -- INVIATA | ERRORE
+    EMAIL_ERRORE           NVARCHAR(4000) NULL,
+    UPDATED_AT_UTC         DATETIME2     NULL
+  );
+  CREATE UNIQUE INDEX UX_THINKAI_DECOX_ORDINI_LOG_CORRID ON dbo.THINKAI_DECOX_ORDINI_LOG (CORRELATION_ID);
+  CREATE INDEX IX_THINKAI_DECOX_ORDINI_LOG_FILE_STATO ON dbo.THINKAI_DECOX_ORDINI_LOG (FILE_NAME, STATO);
+END
+GO
+
+-- ===== ORDINI_LOG_RIGHE: una riga per riga d'ordine (dashboard anomalie) ==================
+IF OBJECT_ID(N'dbo.THINKAI_DECOX_ORDINI_LOG_RIGHE', N'U') IS NULL
+BEGIN
+  CREATE TABLE dbo.THINKAI_DECOX_ORDINI_LOG_RIGHE (
+    ID                   INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_THINKAI_DECOX_ORDINI_LOG_RIGHE PRIMARY KEY,
+    CORRELATION_ID       NVARCHAR(100) NOT NULL,
+    RIGA_NUMERO          INT           NOT NULL,
+    CODICE_CLIENTE_RAW   NVARCHAR(200) NULL,
+    CODICE_CLIENTE_NORM  NVARCHAR(200) NULL,
+    DESCRIZIONE          NVARCHAR(1000) NULL,
+    COD_ART              NVARCHAR(50)  NULL,
+    MATCH_METHOD         NVARCHAR(30)  NULL,
+    MATCH_CONFIDENCE     DECIMAL(4,3)  NULL,        -- colonna 1/2 controllata dal preflight
+    MATCH_EVIDENCE       NVARCHAR(2000) NULL,       -- colonna 2/2 controllata dal preflight
+    UM_ORDINE            NVARCHAR(20)  NULL,
+    UM_TARGET            NVARCHAR(20)  NULL,
+    QUANTITA_RAW         NVARCHAR(50)  NULL,
+    QUANTITA_NORM        DECIMAL(18,4) NULL,
+    PREZZO_RAW           NVARCHAR(50)  NULL,
+    PREZZO_NORM          DECIMAL(18,4) NULL,
+    STATO                NVARCHAR(30)  NULL,
+    MOTIVO               NVARCHAR(2000) NULL,
+    CREATED_AT_UTC       DATETIME2     NOT NULL CONSTRAINT DF_THINKAI_DECOX_ORDINI_LOG_RIGHE_CREATED DEFAULT SYSUTCDATETIME()
+  );
+  CREATE INDEX IX_THINKAI_DECOX_ORDINI_LOG_RIGHE_CORRID ON dbo.THINKAI_DECOX_ORDINI_LOG_RIGHE (CORRELATION_ID);
+END
+GO
+
+-- ===== Verifica finale: deve restituire 4 / 6 / 2 (stessi conteggi del preflight del flusso) ==
+SELECT
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES  WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME IN
+     ('THINKAI_DECOX_CLIENTI_PROFILO','THINKAI_DECOX_ARTICOLI_PROFILO','THINKAI_DECOX_ORDINI_LOG','THINKAI_DECOX_ORDINI_LOG_RIGHE')) AS TABELLE_ATTESE_4,
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME='THINKAI_DECOX_ARTICOLI_PROFILO'
+     AND COLUMN_NAME IN ('MATCH_METHOD','VALIDATION_MODE','CONFIDENCE','EVIDENCE_COUNT','LAST_USED_AT_UTC','LAST_CORRELATION_ID')) AS COLONNE_AUTOLEARNING_ATTESE_6,
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME='THINKAI_DECOX_ORDINI_LOG_RIGHE'
+     AND COLUMN_NAME IN ('MATCH_CONFIDENCE','MATCH_EVIDENCE')) AS COLONNE_MATCH_ATTESE_2;
+GO
+
+/* Esempio di profilo cliente (facoltativo; senza riga si usano causale/serie/deposito di default):
+   INSERT INTO dbo.THINKAI_DECOX_CLIENTI_PROFILO (COD_CF, COD_CAUS_DOC, SERIE_DOC, COD_DEP, DESTINATION_POLICY)
+   VALUES (N'codice cliente', N'causale', N'serie', N'deposito', N'REVIEW');
+*/
