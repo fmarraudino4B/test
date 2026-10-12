@@ -12,15 +12,32 @@ Il file generato contiene dati reali del cliente: tienilo FUORI dal repository (
 import argparse, json, os, re, shutil, subprocess, sys
 
 QUI = os.path.dirname(os.path.abspath(__file__))
-FLUSSO = os.path.join(QUI, "Ordine_Cliente_PARAM_v2.0.0_flusso.js")
+FLUSSI = {"cliente": "Ordine_Cliente_PARAM_v2.0.0_flusso.js", "fornitore": "Ordine_Fornitore_PARAM_v1.0.0_flusso.js"}
+FLUSSO = os.path.join(QUI, FLUSSI["cliente"])
 
 def b(v):
     return "true" if v else "false"
+
+def stabilimenti(lista):
+    """[{codice, causale, serie, deposito, alias:[...], filiali:{COD_STAB: causale}}]
+    -> 'COD|CAUSALE|SERIE|DEPOSITO|ALIAS1,ALIAS2|STAB=CAUSALE,STAB=CAUSALE;...' (causale = ordine fornitori;
+    filiali = causale dell'ordine a filiale per ciascun altro stabilimento)"""
+    voci = []
+    for s in lista or []:
+        campi = [str(s.get("codice", "")), str(s.get("causale", "")), str(s.get("serie", "")), str(s.get("deposito", "")),
+                 ",".join(str(x) for x in s.get("alias", [])),
+                 ",".join(f"{k}={v}" for k, v in (s.get("filiali") or {}).items())]
+        if any(any(ch in x for ch in ";|") for x in campi):
+            sys.exit("ERRORE: stabilimenti: i caratteri ';' e '|' non sono ammessi nei valori")
+        voci.append("|".join(campi))
+    return ";".join(voci)
 
 def mappa(p):
     i, c, n, d, s, o = (p.get(k, {}) for k in ("identita", "cartelle", "notifiche", "documentoErp", "soglie", "opzioni"))
     dms = o.get("dms", {})
     short = i.get("ownShortName", "")
+    stab = stabilimenti(o.get("stabilimenti", []))
+    default_ok = not stab     # con gli stabilimenti configurati causale/serie/deposito arrivano da li
     return {
         "NOME_AGENTE": (i.get("agentVersion", ""), True),
         "RAGIONE_SOCIALE_PROPRIA": (i.get("ownName", ""), True),
@@ -34,9 +51,9 @@ def mappa(p):
         "CARTELLA_DMS": (c.get("dmsDirectory", ""), bool(dms.get("attivo"))),
         "EMAIL_OPERATORE": (n.get("operatorEmail", ""), True),
         "EMAIL_CC": (n.get("operatorEmailCc", ""), False),
-        "CAUSALE_DOC": (d.get("defaultCausale", ""), True),
-        "SERIE_DOC": (d.get("defaultSerie", ""), True),
-        "DEPOSITO": (d.get("defaultDeposito", ""), True),
+        "CAUSALE_DOC": (d.get("defaultCausale", ""), default_ok),
+        "SERIE_DOC": (d.get("defaultSerie", ""), default_ok),
+        "DEPOSITO": (d.get("defaultDeposito", ""), default_ok),
         "DEST_WS_READY": (b(d.get("destinationWsReady", False)), True),
         "ABILITA_OFFERTA_PROPRIA": (b(o.get("abilitaOffertaPropria", True)), True),
         "ABILITA_KIT": (b(o.get("abilitaKit", True)), True),
@@ -47,6 +64,10 @@ def mappa(p):
         "SOGLIA_PERCENTUALE": (str(s.get("minPercentualeRisoltePerCreare", "")), True),
         "SOGLIA_ASSOLUTA": (str(s.get("minPercentualeAssolutaPerCreare", "")), True),
         "ALIAS_CLIENTI": (o.get("aliasClienti", ""), False),
+        "STABILIMENTI": (stab, False),
+        "NUM_UM_RIGA": (str(d.get("numUmRiga", "")), False),
+        "PREZZO_POLICY": (o.get("prezzoPolicy", "RICALCOLO_ERP"), True),
+        "USA_CODICE_STAMPATO": (b(o.get("usaCodiceFornitoreStampato", False)), True),
     }
 
 def schema(profilo, out):
@@ -65,7 +86,8 @@ def schema(profilo, out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("profilo")
-    ap.add_argument("--flusso", default=FLUSSO)
+    ap.add_argument("--tipo", choices=sorted(FLUSSI), default="cliente", help="template: ordine cliente (ORD_CLI) o ordine fornitore (ORD_FOR)")
+    ap.add_argument("--flusso", default=None)
     ap.add_argument("--out")
     ap.add_argument("--parziale", action="store_true", help="non fallire sui valori mancanti: restano <SEGNAPOSTO> (il preflight del flusso blocca l'esecuzione)")
     ap.add_argument("--schema", action="store_true", help="genera solo lo script SQL delle tabelle (serve solo il prefisso)")
@@ -73,7 +95,7 @@ def main():
     profilo = json.load(open(a.profilo, encoding="utf-8"))
     if a.schema:
         return schema(profilo, a.out)
-    src = open(a.flusso, encoding="utf-8").read()
+    src = open(a.flusso or os.path.join(QUI, FLUSSI[a.tipo]), encoding="utf-8").read()
     errori, mancanti = [], []
     for k, (v, obbligatorio) in mappa(profilo).items():
         if obbligatorio and not str(v).strip():
