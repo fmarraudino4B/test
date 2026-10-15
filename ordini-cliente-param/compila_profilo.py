@@ -70,16 +70,16 @@ def mappa(p):
         "USA_CODICE_STAMPATO": (b(o.get("usaCodiceFornitoreStampato", False)), True),
     }
 
-def schema(profilo, out, tipo="cliente"):
+def schema(profilo, out, tipo="cliente", pulizia=False):
     prefisso = str(profilo.get("identita", {}).get("prefissoTabelle", "")).strip()
     if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{2,40}_", prefisso):
         sys.exit("ERRORE: identita.prefissoTabelle deve essere un identificatore SQL che finisce con '_' (es. THINKAI_CLIENTE_)")
-    src = open(os.path.join(QUI, "schema_tabelle_ordini_fornitore.sql" if tipo == "fornitore" else "schema_tabelle_ordini.sql"), encoding="utf-8").read()
+    src = open(os.path.join(QUI, "pulizia_tabelle_ordini.sql" if pulizia else ("schema_tabelle_ordini_fornitore.sql" if tipo == "fornitore" else "schema_tabelle_ordini.sql")), encoding="utf-8").read()
     src = src.replace("<PREFISSO_TABELLE>", prefisso)
     residui = sorted(set(re.findall(r"<[A-Z][A-Z0-9_]{3,}>", src)))
     if residui:
         sys.exit("segnaposto non risolti: " + ", ".join(residui))
-    out = out or "schema-tabelle-" + prefisso.strip("_").lower() + ".privato.sql"
+    out = out or ("pulizia-tabelle-" if pulizia else "schema-tabelle-") + prefisso.strip("_").lower() + ".privato.sql"
     open(out, "w", encoding="utf-8").write(src)
     print("OK ->", out)
 
@@ -90,11 +90,12 @@ def main():
     ap.add_argument("--flusso", default=None)
     ap.add_argument("--out")
     ap.add_argument("--parziale", action="store_true", help="non fallire sui valori mancanti: restano <SEGNAPOSTO> (il preflight del flusso blocca l'esecuzione)")
+    ap.add_argument("--pulizia", action="store_true", help="genera lo script SQL di pulizia delle tabelle (anteprima di default)")
     ap.add_argument("--schema", action="store_true", help="genera solo lo script SQL delle tabelle (serve solo il prefisso)")
     a = ap.parse_args()
     profilo = json.load(open(a.profilo, encoding="utf-8"))
-    if a.schema:
-        return schema(profilo, a.out, a.tipo)
+    if a.schema or a.pulizia:
+        return schema(profilo, a.out, a.tipo, a.pulizia)
     src = open(a.flusso or os.path.join(QUI, FLUSSI[a.tipo]), encoding="utf-8").read()
     errori, mancanti = [], []
     for k, (v, obbligatorio) in mappa(profilo).items():

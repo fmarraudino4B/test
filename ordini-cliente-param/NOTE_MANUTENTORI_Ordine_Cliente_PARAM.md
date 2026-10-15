@@ -160,3 +160,14 @@ La tabella è **condivisa**: i codici fornitore appresi dal DDT servono anche ag
 **Ripetere la prova.** Il PDF è rimasto in `…\processing\<prefisso>_2026-1MBOF-0001894.pdf` (rimetterlo in `ORDINI` col nome originale);
 la riga di log `IN_ELABORAZIONE` viene chiusa come orfana al giro successivo. Configurare la Gestione errori del ForEach (R3), altrimenti
 un errore ferma tutta la coda.
+
+---
+
+# Pulizia tabelle di appoggio
+
+`pulizia_tabelle_ordini.sql` (generico, `--pulizia` del compilatore; versione Decox: `pulizia_tabelle_decox.sql`). **Anteprima di default**
+(`@Conferma = 0`: conta, mostra la composizione della memoria e fa ROLLBACK). Parametri: `@PulisciLog` (log testate e righe, anche righe orfane
+in modalità completa), `@PulisciMemoria` (solo righe `ARTICOLI_PROFILO` con `ORIGINE='IMPORT'`, `CREATED_BY='WORKFORCE_AUTO'` e
+`LAST_CORRELATION_ID` presente nei log selezionati), `@PulisciProfili` (configurazione fornitori, spento), finestra `@Dal`/`@Fino`.
+Non tocca le tabelle del DDT né quelle TargetCross; `ARTICOLI_PROFILO` è condivisa col DDT e non viene mai svuotata in blocco.
+Non eseguito su SQL Server reale (solo parsing); provare su TEST e fare un backup in produzione.
