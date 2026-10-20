@@ -24,3 +24,23 @@ Non letti e segnalati: tutto il resto (zip, heic, xml, p7m, winmail.dat…). Un 
 ## Limiti / attenzione
 - Word con solo immagini e Excel con celle unite o intestazioni non sulla riga 1 danno testo povero (intestazione = prima riga).
 - Il testo degli allegati entra nel prompt: è trattato come contenuto non attendibile (come il corpo della mail).
+
+---
+
+# V0.21.1 — cliente cercato anche per e-mail esatta
+
+**Problema (mail di esito del 20/10).** Una mail inoltrata da `arredamentisettimocielo@gmail.com` è finita in Revisione con "Cliente TargetCross non risolto",
+anche se il cliente (009458) ha quella stessa e-mail in anagrafica. Il flusso cercava l'e-mail solo per **dominio** (`E_MAIL_CF LIKE '%dominio%'`) e il dominio
+veniva escluso se generico (gmail.com, libero.it, …): un cliente con e-mail personale non era mai trovabile per e-mail.
+
+**Fix.** Nuova ricerca "Cerca/Valuta cliente per e-mail esatta" nella cascata, dopo alias e P.IVA e **prima** del dominio, valida per qualsiasi dominio:
+`CF.E_MAIL_CF LIKE '%<indirizzo>%'`, poi verifica che l'indirizzo sia **uno degli indirizzi** del campo (separatori `;`, `,`, spazio; maiuscole indifferenti).
+- Una sola anagrafica → `trovato`, metodo `EMAIL` (compare nella mail di esito).
+- Più anagrafiche con lo stesso indirizzo → `ambiguo`: sceglie l'AI solo tra i candidati (come per gli altri metodi), altrimenti revisione.
+- Se il documento riporta una P.IVA diversa da quella dell'anagrafica → `ambiguo` (non si risolve in automatico), con il motivo nella mail.
+- Una semplice somiglianza (`xmail@…` contenuto in `mail@…`) non conta.
+- Il metodo `EMAIL` non viene memorizzato in `THINKAI_DECOX_MAIL_CLIENTI` (l'anagrafica basta); `autoApprendiMetodi` resta `PIVA`.
+
+**Provato** (simulatore dei passi reali, risposte TargetCross simulate): e-mail presente → trovato 009458; stessa e-mail con P.IVA diversa → ambiguo; due anagrafiche → ambiguo;
+sola sottostringa → non trovato; più indirizzi nel campo e maiuscole → trovato. Sulla V0.20 lo stesso caso restituisce "non risolto", come nella mail di esito.
+**Non verificato**: il filtro su `E_MAIL_CF` contro TargetCross reale (stesso campo già usato dalla ricerca per dominio). `agentVersion` → `V0.21.1`.
