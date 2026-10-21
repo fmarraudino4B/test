@@ -73,3 +73,10 @@ tra gli allegati "non letti". `.msg` (binario Outlook) resta non supportato e se
 Il passo `MailDisposition` è l'ultimo top-level e riceve cartella ed esito corretti; senza il log della run non si vede perché non sposti. Ho aggiunto alla "Diagnosi" della mail di esito
 casella, cartella sorgente e cartella di destinazione. Richiesti: riga `MailDisposition` del CSV di una run (Success, Error, Summary) e la struttura reale delle cartelle IMAP
 (es. `Elaborate` vs `INBOX.Elaborate`). Attenzione: `operatorEmail` coincide con la casella interrogata dal trigger, quindi le mail di esito rientrano nella stessa casella.
+
+## V0.21.3
+
+- **Quantità non indicata = 1.** Nuovo parametro `quantitaMancanteDefault` (default `true`): se la riga ha codice o descrizione ma nessuna quantità esplicita, viene assunta 1 e la mail di esito riporta l'avviso "quantità non indicata, assunta 1: verificare". Con `false` torna il comportamento precedente (riga scartata).
+- **Stabilimento di default.** Nuovo parametro `stabilimentoDefault` (vuoto di default): se nessuna casella, firma o destinazione identifica lo stabilimento, usa il codice indicato (es. `VR`) con avviso. Vuoto = ordine in revisione, come prima.
+- **Cartelle mail.** `cartellaMailElaborate` / `cartellaMailRevisione` ora `INBOX/Elaborate` / `INBOX/Revisione`. Se il server usa il punto come separatore: `INBOX.Elaborate` / `INBOX.Revisione`. Verificare in Thunderbird (Iscrizione) che non esistano cartelle `Elaborate`/`Revisione` create alla radice dalle versioni precedenti.
+- **Esito.** Nuova riga "Chiusura mail: cartella / casella"; corretto l'ordine di calcolo che lasciava vuota la destinazione nella diagnosi.
