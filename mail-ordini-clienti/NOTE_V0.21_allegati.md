@@ -44,3 +44,32 @@ veniva escluso se generico (gmail.com, libero.it, …): un cliente con e-mail pe
 **Provato** (simulatore dei passi reali, risposte TargetCross simulate): e-mail presente → trovato 009458; stessa e-mail con P.IVA diversa → ambiguo; due anagrafiche → ambiguo;
 sola sottostringa → non trovato; più indirizzi nel campo e maiuscole → trovato. Sulla V0.20 lo stesso caso restituisce "non risolto", come nella mail di esito.
 **Non verificato**: il filtro su `E_MAIL_CF` contro TargetCross reale (stesso campo già usato dalla ricerca per dominio). `agentVersion` → `V0.21.1`.
+
+---
+
+# V0.21.2 — correzioni dai test del 20-21/10
+
+## 1. Ordini "GIA' ELABORATA" ma assenti in TargetCross
+- **Refuso:** `modalitaTest` era configurato `True` (maiuscola) e il codice confrontava con `"true"`: la modalità test **non era mai attiva**. In modalità test la chiave del
+  journal di idempotenza (`ordcli-mail-create-<chiave>`) è diversa a ogni run; senza, una mail rimandata con lo stesso contenuto veniva "riprodotta" dal journal
+  (step verde ma **non eseguito**) anche se l'ordine di prova era stato cancellato in TargetCross o la creazione precedente era finita in errore.
+- **Fix:** confronto senza distinzione maiuscole/minuscole; in modalità test anche il **tag** `TK-…` (usato dal controllo duplicati) cambia a ogni run (prima restava uguale,
+  perché derivava dai primi caratteri della sola chiave di business). ⚠️ Ora la modalità test è davvero **attiva**: ogni rinvio crea un nuovo ordine. In produzione impostare `modalitaTest = false`.
+- **Nuovo esito `JOURNAL_SENZA_DOCUMENTO`:** se il journal dice "già creato" ma in TargetCross non esiste alcun documento col tag, l'esito non è più "già elaborata"
+  (mail archiviata in Elaborate): diventa "DA VERIFICARE" (mail in Revisione) con la spiegazione.
+
+## 2. Righe SPNOTE con sconto
+Il flusso **non invia sconti** sulle righe segnaposto: il payload aveva solo `COD_ART`, quantità, `FLAG_CALC_PRZ: 1` e descrizione. Quindi gli sconti (50 + 10 nello screenshot) sono
+calcolati da TargetCross (condizioni cliente / listino dell'articolo SPNOTE) perché `FLAG_CALC_PRZ = 1` chiede il ricalcolo. Ora le righe segnaposto partono con
+`FLAG_CALC_PRZ: 0` e `SCONTO_1..3: 0`. ⚠️ Da verificare sul prossimo ordine; se gli sconti ricompaiono vengono dall'anagrafica di SPNOTE.
+
+## 3. "NON E' UN ORDINE" su mail inoltrata come allegato (Lombardelli)
+Il testo letto era solo l'intestazione dell'inoltro (215 caratteri): l'ordine vero stava nell'allegato `Parte allegato al messaggio.tmp` (messaggio inoltrato "come allegato"), ignorato.
+**Fix:** nuovo formato `eml` (`.eml` e qualsiasi `.tmp`): `FileRead` + lettura MIME dentro il passo "Accoda testo allegato" (multipart, `message/rfc822` annidati, base64 / quoted-printable,
+UTF-8 / Latin-1, intestazioni codificate, HTML → testo, senza usare `String`/`Number`); il testo entra nel prompt con Da / A / Data / Oggetto del messaggio originale. Un `.tmp` non-mail finisce
+tra gli allegati "non letti". `.msg` (binario Outlook) resta non supportato e segnalato.
+
+## 4. Mail non spostata in Elaborate / Revisione — NON risolto, serve il log
+Il passo `MailDisposition` è l'ultimo top-level e riceve cartella ed esito corretti; senza il log della run non si vede perché non sposti. Ho aggiunto alla "Diagnosi" della mail di esito
+casella, cartella sorgente e cartella di destinazione. Richiesti: riga `MailDisposition` del CSV di una run (Success, Error, Summary) e la struttura reale delle cartelle IMAP
+(es. `Elaborate` vs `INBOX.Elaborate`). Attenzione: `operatorEmail` coincide con la casella interrogata dal trigger, quindi le mail di esito rientrano nella stessa casella.
