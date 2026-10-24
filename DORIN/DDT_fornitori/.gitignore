@@ -1,0 +1,4 @@
+profilo-*.privato.json
+*.privato.thinkaiagent.json
+esito_verifica*.txt
+__pycache__/

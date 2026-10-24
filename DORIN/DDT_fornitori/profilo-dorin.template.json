@@ -1,0 +1,20 @@
+{
+  "_istruzioni": "Copiare in profilo-dorin.privato.json (escluso da git), compilare e lanciare: python adatta_mysql.py <export Decox> --profilo profilo-dorin.privato.json. Formati delle mappe identici al flusso Decox: voci separate da ';'.",
+  "nomeAgente": "DOR DDT fornitori v1.2.3 MySQL",
+  "credentialName": "<NOME_CREDENZIALE_TARGET_CROSS_DORIN_IN_STUDIO>",
+  "config": {
+    "workRoot": "<CARTELLA_DI_LAVORO, es. X:\\WorkForce\\DDT>",
+    "workRootO": "<CARTELLA_SCANSIONE, es. X:\\WorkForce\\DDT\\Scansione>",
+    "operatorEmail": "<EMAIL_OPERATORE>",
+    "operatorEmailCc": "",
+    "destinatarioPiva": "<PIVA_DORIN>",
+    "destinatarioRagioneSociale": "<RAGIONE_SOCIALE_DORIN>",
+    "mappaDestinazioni": "<TESTO_DESTINAZIONE=COD; ... es. SEDE CENTRALE=SC>",
+    "mappaDepositiDestinazione": "<COD=DEPOSITO; ... es. SC=01>",
+    "catalogoCausaliDestinazioneDdt": "<COD:DTR=CAUSALE; COD:RSC=CAUSALE; ...>",
+    "catalogoCausaliRiferimento": "",
+    "mappaBrandArticolo": "",
+    "dmsAbilitato": "false",
+    "dmsCartellaImport": ""
+  }
+}
